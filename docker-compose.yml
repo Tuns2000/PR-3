@@ -5,6 +5,7 @@ volumes:
   pgdata:
   appdata:
   csvdata:
+  redisdata: 
 
 services:
   db:
@@ -27,18 +28,43 @@ services:
     ports:
       - "5432:5432"
 
+
+  redis:
+    image: redis:7-alpine
+    container_name: iss_redis
+    networks:
+      - backend
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   rust_iss:
     build:
       context: ./services/rust-iss
     container_name: rust_iss
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgres://monouser:monopass@db:5432/monolith}
-      NASA_API_URL: ${NASA_API_URL:-}
-      NASA_API_KEY: ${NASA_API_KEY:-}
-      FETCH_EVERY_SECONDS: ${FETCH_EVERY_SECONDS:-600}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379} 
+      NASA_API_URL: ${NASA_API_URL:-https://api.nasa.gov}
+      NASA_API_KEY: ${NASA_API_KEY:-DEMO_KEY}
       WHERE_ISS_URL: ${WHERE_ISS_URL:-https://api.wheretheiss.at/v1/satellites/25544}
+ 
+      ISS_EVERY_SECONDS: ${ISS_EVERY_SECONDS:-120}
+      APOD_EVERY_SECONDS: ${APOD_EVERY_SECONDS:-43200}
+      NEO_EVERY_SECONDS: ${NEO_EVERY_SECONDS:-7200}
+      DONKI_EVERY_SECONDS: ${DONKI_EVERY_SECONDS:-3600}
+      SPACEX_EVERY_SECONDS: ${SPACEX_EVERY_SECONDS:-3600}
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-30}
     depends_on:
       db:
+        condition: service_healthy
+      redis: 
         condition: service_healthy
     networks:
       - backend

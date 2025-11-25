@@ -2,6 +2,7 @@ use crate::domain::error::ApiError;
 use reqwest::Client;
 use serde_json::Value;
 use std::time::Duration;
+use base64::{Engine as _, engine::general_purpose}; 
 
 pub struct AstronomyClient {
     client: Client,
@@ -50,7 +51,8 @@ impl AstronomyClient {
 
     async fn try_fetch(&self, url: &str) -> Result<Value, String> {
         let auth = format!("{}:{}", self.app_id, self.app_secret);
-        let basic_auth = format!("Basic {}", base64::encode(&auth));
+       
+        let basic_auth = format!("Basic {}", general_purpose::STANDARD.encode(&auth));
 
         let response = self
             .client

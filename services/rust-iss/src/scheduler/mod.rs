@@ -32,7 +32,7 @@ impl Scheduler {
     }
 
     pub fn start(self: Arc<Self>) {
-        // ISS fetcher (каждые 120 секунд)
+        // ISS fetcher
         {
             let scheduler = self.clone();
             tokio::spawn(async move {
@@ -48,7 +48,7 @@ impl Scheduler {
                             info!("ISS position updated: lat={}, lon={}", position.latitude, position.longitude);
                         }
                         Err(e) => {
-                            error!("Failed to fetch ISS position: {}", e);
+                            error!("Failed to fetch ISS position: {:?}", e); 
                         }
                     }
                 }
@@ -59,8 +59,8 @@ impl Scheduler {
         {
             let scheduler = self.clone();
             tokio::spawn(async move {
-                info!("Starting OSDR scheduler (every {}s)", scheduler.config.iss_every_seconds);
-                let mut interval = tokio::time::interval(Duration::from_secs(7200)); // 2 hours
+                info!("Starting OSDR scheduler (every 7200s)");
+                let mut interval = tokio::time::interval(Duration::from_secs(7200));
                 
                 loop {
                     interval.tick().await;
@@ -71,14 +71,14 @@ impl Scheduler {
                             info!("OSDR synced {} datasets", count);
                         }
                         Err(e) => {
-                            error!("Failed to sync OSDR: {}", e);
+                            error!("Failed to sync OSDR: {:?}", e); 
                         }
                     }
                 }
             });
         }
 
-        // APOD fetcher (каждые 12 часов)
+        // APOD fetcher
         {
             let scheduler = self.clone();
             tokio::spawn(async move {
@@ -90,7 +90,7 @@ impl Scheduler {
                     
                     let mut service = scheduler.nasa_service.lock().await;
                     if let Err(e) = service.get_apod().await {
-                        error!("Failed to fetch APOD: {}", e);
+                        error!("Failed to fetch APOD: {:?}", e); 
                     } else {
                         info!("APOD fetched successfully");
                     }
@@ -98,7 +98,7 @@ impl Scheduler {
             });
         }
 
-        // NEO fetcher (каждые 2 часа)
+        // NEO fetcher
         {
             let scheduler = self.clone();
             tokio::spawn(async move {
@@ -110,7 +110,7 @@ impl Scheduler {
                     
                     let mut service = scheduler.nasa_service.lock().await;
                     if let Err(e) = service.get_neo().await {
-                        error!("Failed to fetch NEO: {}", e);
+                        error!("Failed to fetch NEO: {:?}", e); 
                     } else {
                         info!("NEO fetched successfully");
                     }
@@ -118,7 +118,7 @@ impl Scheduler {
             });
         }
 
-        // DONKI fetcher (каждый час)
+        // DONKI fetcher
         {
             let scheduler = self.clone();
             tokio::spawn(async move {
@@ -136,7 +136,7 @@ impl Scheduler {
             });
         }
 
-        // SpaceX fetcher (каждый час)
+        // SpaceX fetcher
         {
             let scheduler = self.clone();
             tokio::spawn(async move {
@@ -148,7 +148,7 @@ impl Scheduler {
                     
                     let mut service = scheduler.spacex_service.lock().await;
                     if let Err(e) = service.get_next_launch().await {
-                        error!("Failed to fetch SpaceX launch: {}", e);
+                        error!("Failed to fetch SpaceX launch: {:?}", e); 
                     } else {
                         info!("SpaceX next launch fetched");
                     }
