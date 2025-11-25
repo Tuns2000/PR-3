@@ -20,4 +20,5 @@ validator = { version = "0.16", features = ["derive"] }
 dotenv = "0.15"
 tower = "0.4"
 tower-http = { version = "0.5", features = ["trace", "cors"] }
+base64 = "0.21"
 
