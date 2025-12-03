@@ -1,4 +1,3 @@
-<?php
 {{-- filepath: services/php-web/laravel-patches/resources/views/dashboard.blade.php --}}
 @extends('layouts.app')
 

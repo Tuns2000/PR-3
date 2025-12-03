@@ -8,6 +8,7 @@ use App\Http\Controllers\JwstController;
 use App\Http\Controllers\AstroController;
 use App\Http\Controllers\ProxyController;
 use App\Http\Controllers\CmsController;
+use App\Http\Controllers\LegacyController;
 
 /*
 |--------------------------------------------------------------------------
@@ -51,3 +52,9 @@ Route::get('/proxy/{path}', [ProxyController::class, 'proxy'])
 
 // CMS страницы
 Route::get('/page/{slug}', [CmsController::class, 'show'])->name('cms.page');
+
+// Legacy CSV/XLSX интерфейс
+Route::prefix('legacy')->group(function () {
+    Route::get('/csv', [LegacyController::class, 'index'])->name('legacy.index');
+    Route::get('/csv/view/{filename}', [LegacyController::class, 'view'])->name('legacy.view');
+});
