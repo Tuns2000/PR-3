@@ -1,52 +1,94 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container py-3">
-  <h3 class="mb-3">NASA OSDR</h3>
-  <div class="small text-muted mb-2">Источник {{ $src }}</div>
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="bi bi-database"></i> NASA OSDR Datasets
+        </h1>
+    </div>
+</div>
 
-  <div class="table-responsive">
-    <table class="table table-sm table-striped align-middle">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>dataset_id</th>
-          <th>title</th>
-          <th>REST_URL</th>
-          <th>updated_at</th>
-          <th>inserted_at</th>
-          <th>raw</th>
-        </tr>
-      </thead>
-      <tbody>
-      @forelse($items as $row)
-        <tr>
-          <td>{{ $row['id'] }}</td>
-          <td>{{ $row['dataset_id'] ?? '—' }}</td>
-          <td style="max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-            {{ $row['title'] ?? '—' }}
-          </td>
-          <td>
-            @if(!empty($row['rest_url']))
-              <a href="{{ $row['rest_url'] }}" target="_blank" rel="noopener">открыть</a>
-            @else — @endif
-          </td>
-          <td>{{ $row['updated_at'] ?? '—' }}</td>
-          <td>{{ $row['inserted_at'] ?? '—' }}</td>
-          <td>
-            <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#raw-{{ $row['id'] }}-{{ md5($row['dataset_id'] ?? (string)$row['id']) }}">JSON</button>
-          </td>
-        </tr>
-        <tr class="collapse" id="raw-{{ $row['id'] }}-{{ md5($row['dataset_id'] ?? (string)$row['id']) }}">
-          <td colspan="7">
-            <pre class="mb-0" style="max-height:260px;overflow:auto">{{ json_encode($row['raw'] ?? [], JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) }}</pre>
-          </td>
-        </tr>
-      @empty
-        <tr><td colspan="7" class="text-center text-muted">нет данных</td></tr>
-      @endforelse
-      </tbody>
-    </table>
-  </div>
+{{-- Error Handling --}}
+@if(isset($error))
+<div class="alert error-alert" role="alert">
+    <i class="bi bi-exclamation-triangle"></i> {{ $error }}
+</div>
+@endif
+
+{{-- Sync Button --}}
+<div class="row mb-4">
+    <div class="col-12">
+        <button class="btn btn-primary" onclick="syncDatasets()">
+            <i class="bi bi-arrow-repeat"></i> Sync with NASA OSDR
+        </button>
+        <span id="syncStatus" class="ms-3 text-muted"></span>
+    </div>
+</div>
+
+{{-- Datasets Table --}}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-list-ul"></i> Available Datasets ({{ count($datasets) }})
+                </h5>
+            </div>
+            <div class="card-body">
+                @if(count($datasets) > 0)
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Dataset ID</th>
+                                    <th>Title</th>
+                                    <th>Description</th>
+                                    <th>Release Date</th>
+                                    <th>Last Updated</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($datasets as $dataset)
+                                <tr>
+                                    <td><code>{{ $dataset->datasetId }}</code></td>
+                                    <td>{{ Str::limit($dataset->title, 40) }}</td>
+                                    <td>{{ $dataset->description ? Str::limit($dataset->description, 60) : 'N/A' }}</td>
+                                    <td>{{ $dataset->releaseDate ? \Carbon\Carbon::parse($dataset->releaseDate)->format('Y-m-d') : 'N/A' }}</td>
+                                    <td>{{ \Carbon\Carbon::parse($dataset->updatedAt)->diffForHumans() }}</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @else
+                    <p class="text-muted">No datasets available. Click "Sync with NASA OSDR" to fetch data.</p>
+                @endif
+            </div>
+        </div>
+    </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+async function syncDatasets() {
+    const statusEl = document.getElementById('syncStatus');
+    statusEl.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Syncing...';
+    
+    try {
+        const response = await fetch('{{ route('osdr.api.sync') }}');
+        const data = await response.json();
+        
+        if (data.ok) {
+            statusEl.innerHTML = '<span class="text-success">✓ Synced successfully!</span>';
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            statusEl.innerHTML = '<span class="text-danger">✗ Error: ' + data.error.message + '</span>';
+        }
+    } catch (error) {
+        statusEl.innerHTML = '<span class="text-danger">✗ Failed: ' + error.message + '</span>';
+    }
+}
+</script>
+@endpush

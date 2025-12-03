@@ -1,11 +1,29 @@
 <?php
 namespace App\Http\Controllers;
-use Illuminate\Support\Facades\DB;
 
-class CmsController extends Controller {
-  public function page(string $slug) {
-    $row = DB::selectOne("SELECT title, content FROM cms_blocks WHERE slug = ? AND is_active = TRUE", [$slug]);
-    if (!$row) abort(404);
-    return response()->view('cms.page', ['title' => $row->title, 'html' => $row->content]);
-  }
+use Illuminate\Http\Request;
+
+class CmsController extends Controller
+{
+    /**
+     * Показать CMS страницу по slug
+     */
+    public function show(Request $request, string $slug)
+    {
+        // Простой роутинг для статических страниц
+        $pages = [
+            'about' => 'About Cassiopeia Space Dashboard',
+            'contact' => 'Contact Us',
+            'privacy' => 'Privacy Policy',
+        ];
+
+        if (!isset($pages[$slug])) {
+            abort(404);
+        }
+
+        return view('cms.page', [
+            'slug' => $slug,
+            'title' => $pages[$slug]
+        ]);
+    }
 }

@@ -1,20 +1,53 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-
-Route::get('/', fn() => redirect('/dashboard'));
-
-// Панели
-Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index']);
-Route::get('/osdr',      [\App\Http\Controllers\OsdrController::class,      'index']);
-
-// Прокси к rust_iss
-Route::get('/api/iss/last',  [\App\Http\Controllers\ProxyController::class, 'last']);
-Route::get('/api/iss/trend', [\App\Http\Controllers\ProxyController::class, 'trend']);
-
-// JWST галерея (JSON)
-Route::get('/api/jwst/feed', [\App\Http\Controllers\DashboardController::class, 'jwstFeed']);
-Route::get("/api/astro/events", [\App\Http\Controllers\AstroController::class, "events"]);
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\IssController;
+use App\Http\Controllers\OsdrController;
+use App\Http\Controllers\JwstController;
 use App\Http\Controllers\AstroController;
-Route::get('/page/{slug}', [\App\Http\Controllers\CmsController::class, 'page']);
-Route::get('/page/{slug}', [\App\Http\Controllers\CmsController::class, 'page']);
+use App\Http\Controllers\ProxyController;
+use App\Http\Controllers\CmsController;
+
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+*/
+
+// Главная страница - дашборд
+Route::get('/', [DashboardController::class, 'index'])->name('home');
+Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+// ISS страницы и API
+Route::prefix('iss')->group(function () {
+    Route::get('/', [IssController::class, 'index'])->name('iss.index');
+    Route::get('/api/last', [IssController::class, 'apiLast'])->name('iss.api.last');
+    Route::get('/api/fetch', [IssController::class, 'apiFetch'])->name('iss.api.fetch');
+    Route::get('/api/history', [IssController::class, 'apiHistory'])->name('iss.api.history');
+});
+
+// OSDR страницы и API
+Route::prefix('osdr')->group(function () {
+    Route::get('/', [OsdrController::class, 'index'])->name('osdr.index');
+    Route::get('/api/sync', [OsdrController::class, 'apiSync'])->name('osdr.api.sync');
+    Route::get('/api/list', [OsdrController::class, 'apiList'])->name('osdr.api.list');
+});
+
+// JWST API
+Route::prefix('jwst')->group(function () {
+    Route::get('/api/images/{programId?}', [JwstController::class, 'apiImages'])->name('jwst.api.images');
+});
+
+// Astronomy API
+Route::prefix('astro')->group(function () {
+    Route::get('/api/events', [AstroController::class, 'apiEvents'])->name('astro.api.events');
+});
+
+// Proxy для прямых запросов к Rust API (для отладки)
+Route::get('/proxy/{path}', [ProxyController::class, 'proxy'])
+    ->where('path', '.*')
+    ->name('proxy');
+
+// CMS страницы
+Route::get('/page/{slug}', [CmsController::class, 'show'])->name('cms.page');
