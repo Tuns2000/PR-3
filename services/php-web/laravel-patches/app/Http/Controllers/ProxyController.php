@@ -2,39 +2,52 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Response;
+use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Http;
 
 class ProxyController extends Controller
 {
-    private function base(): string {
-        return getenv('RUST_BASE') ?: 'http://rust_iss:3000';
-    }
+    private string $rustApiUrl;
 
-    public function last()  { return $this->pipe('/last'); }
-
-    public function trend() {
-        $q = request()->getQueryString();
-        return $this->pipe('/iss/trend' . ($q ? '?' . $q : ''));
-    }
-
-    private function pipe(string $path)
+    public function __construct()
     {
-        $url = $this->base() . $path;
+        $this->rustApiUrl = env('RUST_ISS_URL', 'http://rust_iss:3000');
+    }
+
+    /**
+     * Прокси для Rust API (без кэширования)
+     * Используется для тестирования прямых запросов
+     */
+    public function proxy(Request $request, string $path): JsonResponse
+    {
         try {
-            $ctx = stream_context_create([
-                'http' => ['timeout' => 5, 'ignore_errors' => true],
+            $fullUrl = "{$this->rustApiUrl}/{$path}";
+            
+            $response = Http::timeout(30)
+                ->get($fullUrl, $request->query());
+
+            if ($response->successful()) {
+                return response()->json($response->json());
+            }
+
+            return response()->json([
+                'ok' => false,
+                'error' => [
+                    'code' => 'PROXY_ERROR',
+                    'message' => "Rust API returned HTTP {$response->status()}",
+                    'trace_id' => uniqid('prx_', true)
+                ]
             ]);
-            $body = @file_get_contents($url, false, $ctx);
-            if ($body === false || trim($body) === '') {
-                $body = '{}';
-            }
-            json_decode($body);
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                $body = '{}';
-            }
-            return new Response($body, 200, ['Content-Type' => 'application/json']);
-        } catch (\Throwable $e) {
-            return new Response('{"error":"upstream"}', 200, ['Content-Type' => 'application/json']);
+        } catch (\Exception $e) {
+            return response()->json([
+                'ok' => false,
+                'error' => [
+                    'code' => 'PROXY_ERROR',
+                    'message' => $e->getMessage(),
+                    'trace_id' => uniqid('prx_', true)
+                ]
+            ]);
         }
     }
 }
