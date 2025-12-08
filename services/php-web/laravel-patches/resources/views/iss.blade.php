@@ -149,7 +149,7 @@ async function refreshPosition() {
         const response = await fetch('{{ route('iss.api.fetch') }}');
         const data = await response.json();
         
-        if (data.ok) {
+        if (data.success) {
             const pos = data.data;
             document.getElementById('lat').textContent = pos.latitude.toFixed(4) + '°';
             document.getElementById('lon').textContent = pos.longitude.toFixed(4) + '°';
@@ -164,7 +164,10 @@ async function refreshPosition() {
             alert('Position updated successfully!');
             setTimeout(() => location.reload(), 1000);
         } else {
-            alert('Error: ' + data.error.message);
+            const errorMsg = (typeof data.error === 'object' && data.error.message) 
+                ? data.error.message 
+                : (data.error || 'Unknown error');
+            alert('Error: ' + errorMsg);
         }
     } catch (error) {
         alert('Failed to fetch position: ' + error.message);
