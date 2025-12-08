@@ -50,7 +50,7 @@
                         </div>
                     </div>
                 @else
-                    <p class="text-muted">No position data available.</p>
+                    <p class="text-white">No position data available.</p>
                 @endif
             </div>
         </div>

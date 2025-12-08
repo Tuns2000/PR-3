@@ -62,7 +62,7 @@
                         </table>
                     </div>
                 @else
-                    <p class="text-muted">No datasets available. Click "Sync with NASA OSDR" to fetch data.</p>
+                    <p class="text-white">No datasets available. Click "Sync with NASA OSDR" to fetch data.</p>
                 @endif
             </div>
         </div>

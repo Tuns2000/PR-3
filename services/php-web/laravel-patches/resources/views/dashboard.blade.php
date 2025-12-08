@@ -12,7 +12,7 @@
 
 {{-- Error Handling --}}
 @if(isset($error))
-<div class="alert error-alert" role="alert">
+<div class="alert error-alert" role="alert" style="color: #fff; background-color: rgba(220, 53, 69, 0.2); border: 1px solid #dc3545; padding: 1rem; border-radius: 0.5rem;">
     <i class="bi bi-exclamation-triangle"></i> {{ $error }}
 </div>
 @endif
@@ -52,7 +52,7 @@
                         Last updated: {{ \Carbon\Carbon::parse($issPosition->timestamp)->format('Y-m-d H:i:s') }} UTC
                     </small>
                 @else
-                    <p class="text-muted">No ISS position data available.</p>
+                    <p class="text-white">No ISS position data available.</p>
                 @endif
             </div>
         </div>
@@ -118,7 +118,7 @@
                         </table>
                     </div>
                 @else
-                    <p class="text-muted">No OSDR datasets available.</p>
+                    <p class="text-white">No OSDR datasets available.</p>
                 @endif
             </div>
         </div>
@@ -155,7 +155,7 @@
                         @endforeach
                     </div>
                 @else
-                    <p class="text-muted">No JWST images available.</p>
+                    <p class="text-white">No JWST images available.</p>
                 @endif
             </div>
         </div>

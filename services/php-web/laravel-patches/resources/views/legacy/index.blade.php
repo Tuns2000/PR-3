@@ -86,7 +86,7 @@
                     </nav>
                     @endif
                 @else
-                    <p class="text-muted">No CSV/XLSX files found.</p>
+                    <p class="text-white">No CSV/XLSX files found.</p>
                 @endif
             </div>
         </div>
