@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS iss_fetch_log (
     longitude NUMERIC(10,6) NOT NULL,
     altitude NUMERIC(10,2) NOT NULL,
     velocity NUMERIC(10,2) NOT NULL,
-    timestamp TIMESTAMPTZ NOT NULL,
+    timestamp TIMESTAMP NOT NULL,
     fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (id, fetched_at)
 ) PARTITION BY RANGE (fetched_at);
@@ -73,6 +73,33 @@ CREATE TABLE IF NOT EXISTS iss_fetch_log_2025_02 PARTITION OF iss_fetch_log
 
 CREATE TABLE IF NOT EXISTS iss_fetch_log_2025_03 PARTITION OF iss_fetch_log
     FOR VALUES FROM ('2025-03-01') TO ('2025-04-01');
+
+CREATE TABLE IF NOT EXISTS iss_fetch_log_2025_04 PARTITION OF iss_fetch_log
+    FOR VALUES FROM ('2025-04-01') TO ('2025-05-01');
+
+CREATE TABLE IF NOT EXISTS iss_fetch_log_2025_05 PARTITION OF iss_fetch_log
+    FOR VALUES FROM ('2025-05-01') TO ('2025-06-01');
+
+CREATE TABLE IF NOT EXISTS iss_fetch_log_2025_06 PARTITION OF iss_fetch_log
+    FOR VALUES FROM ('2025-06-01') TO ('2025-07-01');
+
+CREATE TABLE IF NOT EXISTS iss_fetch_log_2025_07 PARTITION OF iss_fetch_log
+    FOR VALUES FROM ('2025-07-01') TO ('2025-08-01');
+
+CREATE TABLE IF NOT EXISTS iss_fetch_log_2025_08 PARTITION OF iss_fetch_log
+    FOR VALUES FROM ('2025-08-01') TO ('2025-09-01');
+
+CREATE TABLE IF NOT EXISTS iss_fetch_log_2025_09 PARTITION OF iss_fetch_log
+    FOR VALUES FROM ('2025-09-01') TO ('2025-10-01');
+
+CREATE TABLE IF NOT EXISTS iss_fetch_log_2025_10 PARTITION OF iss_fetch_log
+    FOR VALUES FROM ('2025-10-01') TO ('2025-11-01');
+
+CREATE TABLE IF NOT EXISTS iss_fetch_log_2025_11 PARTITION OF iss_fetch_log
+    FOR VALUES FROM ('2025-11-01') TO ('2025-12-01');
+
+CREATE TABLE IF NOT EXISTS iss_fetch_log_2025_12 PARTITION OF iss_fetch_log
+    FOR VALUES FROM ('2025-12-01') TO ('2026-01-01');
 
 -- Индексы на партиционированной таблице
 CREATE INDEX IF NOT EXISTS idx_iss_timestamp ON iss_fetch_log(timestamp);

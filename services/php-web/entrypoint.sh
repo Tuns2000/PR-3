@@ -5,8 +5,8 @@ echo "Starting PHP-FPM entrypoint..."
 
 # Ожидание PostgreSQL
 echo "Waiting for PostgreSQL..."
-until PGPASSWORD=$DB_PASSWORD psql -h "$DB_HOST" -U "$DB_USERNAME" -d "$DB_DATABASE" -c '\q' 2>/dev/null; do
-  echo "PostgreSQL is unavailable - sleeping"
+until PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -U "$DB_USERNAME" -d "$DB_DATABASE" -c '\q' 2>/dev/null; do
+  echo "PostgreSQL is unavailable - sleeping (Host: $DB_HOST, User: $DB_USERNAME, DB: $DB_DATABASE)"
   sleep 2
 done
 echo "PostgreSQL is up!"

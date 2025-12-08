@@ -1,7 +1,7 @@
 FROM php:8.3-fpm-alpine
 
 # пакеты и расширения
-RUN apk add --no-cache bash curl git unzip rsync postgresql-dev \
+RUN apk add --no-cache bash curl git unzip rsync postgresql-dev postgresql-client \
  && docker-php-ext-install pdo pdo_pgsql
 
 # composer
