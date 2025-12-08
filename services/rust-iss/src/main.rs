@@ -7,6 +7,7 @@ mod repo;
 mod routes;
 mod scheduler;
 mod services;
+mod utils;
 
 use crate::{
     clients::{IssClient, NasaClient, OsdrClient, JwstClient, SpaceXClient},
@@ -25,11 +26,23 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilte
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Инициализация логирования
-    tracing_subscriber::registry()
-        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+    // Инициализация структурированного логирования (JSON format)
+    let log_format = std::env::var("LOG_FORMAT").unwrap_or_else(|_| "json".to_string());
+    
+    match log_format.as_str() {
+        "json" => {
+            tracing_subscriber::registry()
+                .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
+                .with(tracing_subscriber::fmt::layer().json())
+                .init();
+        }
+        _ => {
+            tracing_subscriber::registry()
+                .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
+                .with(tracing_subscriber::fmt::layer())
+                .init();
+        }
+    }
 
     info!("Starting rust-iss service...");
 

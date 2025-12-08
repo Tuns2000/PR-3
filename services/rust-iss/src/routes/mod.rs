@@ -82,6 +82,7 @@ pub fn create_router(state: AppState) -> Router {
     // Main router
     Router::new()
         .route("/health", get(health_check))
+        .route("/metrics", get(metrics_handler))
         .nest("/iss", iss_routes)
         .nest("/osdr", osdr_routes)
         .nest("/nasa", nasa_routes)
@@ -95,4 +96,16 @@ pub fn create_router(state: AppState) -> Router {
             state.rate_limiter.clone(),
             rate_limit_middleware,
         ))
+}
+
+/// Prometheus metrics endpoint
+async fn metrics_handler() -> String {
+    use prometheus::{Encoder, TextEncoder};
+    
+    let encoder = TextEncoder::new();
+    let metric_families = prometheus::gather();
+    let mut buffer = Vec::new();
+    
+    encoder.encode(&metric_families, &mut buffer).unwrap();
+    String::from_utf8(buffer).unwrap()
 }

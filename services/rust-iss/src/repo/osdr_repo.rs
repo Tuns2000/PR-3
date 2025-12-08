@@ -137,9 +137,9 @@ impl OsdrRepo {
         let dataset_ids: Vec<String> = datasets.iter().map(|d| d.dataset_id.clone()).collect();
         let titles: Vec<String> = datasets.iter().map(|d| d.title.clone()).collect();
         let descriptions: Vec<Option<String>> = datasets.iter().map(|d| d.description.clone()).collect();
-        let release_dates: Vec<Option<chrono::DateTime<chrono::Utc>>> = 
+        let release_dates: Vec<Option<chrono::NaiveDateTime>> = 
             datasets.iter().map(|d| d.release_date).collect();
-        let updated_ats: Vec<chrono::DateTime<chrono::Utc>> = 
+        let updated_ats: Vec<chrono::NaiveDateTime> = 
             datasets.iter().map(|d| d.updated_at).collect();
 
         let result = sqlx::query(

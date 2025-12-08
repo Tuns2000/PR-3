@@ -1,8 +1,9 @@
 use crate::{
     config::Config,
     services::{IssService, OsdrService, NasaService, SpaceXService},
+    utils::metrics,
 };
-use std::{sync::Arc, time::Duration};
+use std::{sync::Arc, time::{Duration, Instant}};
 use tokio::sync::Mutex;
 use tracing::{error, info, warn};
 use sqlx::PgPool;
@@ -74,13 +75,27 @@ impl Scheduler {
                     // Try to acquire advisory lock
                     match scheduler.try_acquire_lock(LOCK_ID).await {
                         Ok(true) => {
+                            metrics::record_advisory_lock_acquired(LOCK_ID);
+                            
                             // Lock acquired, proceed with fetch
+                            let start = Instant::now();
                             let mut service = scheduler.iss_service.lock().await;
+                            
                             match service.fetch_and_store().await {
                                 Ok(position) => {
-                                    info!("ISS position updated: lat={}, lon={}", position.latitude, position.longitude);
+                                    let duration = start.elapsed().as_secs_f64();
+                                    metrics::record_iss_fetch(
+                                        true, 
+                                        duration, 
+                                        Some(position.altitude), 
+                                        Some(position.velocity)
+                                    );
+                                    info!("ISS position updated: lat={}, lon={}, alt={}, vel={}", 
+                                          position.latitude, position.longitude, position.altitude, position.velocity);
                                 }
                                 Err(e) => {
+                                    let duration = start.elapsed().as_secs_f64();
+                                    metrics::record_iss_fetch(false, duration, None, None);
                                     error!("Failed to fetch ISS position: {:?}", e); 
                                 }
                             }
@@ -91,6 +106,7 @@ impl Scheduler {
                             }
                         }
                         Ok(false) => {
+                            metrics::record_advisory_lock_failed(LOCK_ID);
                             warn!("ISS scheduler: another instance is already running, skipping this tick");
                         }
                         Err(e) => {
@@ -115,13 +131,21 @@ impl Scheduler {
                     // Try to acquire advisory lock (OSDR sync is expensive)
                     match scheduler.try_acquire_lock(LOCK_ID).await {
                         Ok(true) => {
+                            metrics::record_advisory_lock_acquired(LOCK_ID);
                             info!("OSDR scheduler: lock acquired, starting sync");
+                            
+                            let start = Instant::now();
                             let mut service = scheduler.osdr_service.lock().await;
+                            
                             match service.sync_datasets().await {
                                 Ok(count) => {
-                                    info!("OSDR synced {} datasets", count);
+                                    let duration = start.elapsed().as_secs_f64();
+                                    metrics::record_osdr_sync(true, duration, count);
+                                    info!("OSDR synced {} datasets in {:.2}s", count, duration);
                                 }
                                 Err(e) => {
+                                    let duration = start.elapsed().as_secs_f64();
+                                    metrics::record_osdr_sync(false, duration, 0);
                                     error!("Failed to sync OSDR: {:?}", e); 
                                 }
                             }
@@ -132,6 +156,7 @@ impl Scheduler {
                             }
                         }
                         Ok(false) => {
+                            metrics::record_advisory_lock_failed(LOCK_ID);
                             warn!("OSDR scheduler: another instance is syncing, skipping this tick");
                         }
                         Err(e) => {

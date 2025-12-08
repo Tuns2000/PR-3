@@ -1,0 +1,157 @@
+# Prometheus Alert Rules for ISS Tracker
+groups:
+  - name: iss_tracker_alerts
+    interval: 30s
+    rules:
+      # High error rate for ISS fetches
+      - alert: HighISSFetchErrorRate
+        expr: |
+          (
+            rate(iss_fetch_total{status="error"}[5m]) 
+            / 
+            rate(iss_fetch_total[5m])
+          ) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: rust-iss
+        annotations:
+          summary: "High ISS fetch error rate"
+          description: "ISS fetch error rate is {{ $value | humanizePercentage }} (threshold: 10%)"
+
+      # ISS fetch taking too long
+      - alert: SlowISSFetch
+        expr: |
+          histogram_quantile(0.95, 
+            rate(iss_fetch_duration_seconds_bucket[5m])
+          ) > 5
+        for: 5m
+        labels:
+          severity: warning
+          service: rust-iss
+        annotations:
+          summary: "Slow ISS fetch operations"
+          description: "95th percentile ISS fetch time is {{ $value }}s (threshold: 5s)"
+
+      # OSDR sync failures
+      - alert: OSDRSyncFailure
+        expr: |
+          rate(osdr_sync_total{status="error"}[10m]) > 0
+        for: 10m
+        labels:
+          severity: critical
+          service: rust-iss
+        annotations:
+          summary: "OSDR sync is failing"
+          description: "OSDR sync has failed {{ $value }} times in the last 10 minutes"
+
+      # High database query latency
+      - alert: HighDatabaseLatency
+        expr: |
+          histogram_quantile(0.95,
+            rate(db_query_duration_seconds_bucket[5m])
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: rust-iss
+        annotations:
+          summary: "High database query latency"
+          description: "95th percentile DB query time is {{ $value }}s (threshold: 1s)"
+
+      # Low database connection pool
+      - alert: LowDatabaseConnectionPool
+        expr: |
+          db_connections_idle / (db_connections_active + db_connections_idle) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: rust-iss
+        annotations:
+          summary: "Database connection pool nearly exhausted"
+          description: "Only {{ $value | humanizePercentage }} of connections are idle"
+
+      # Advisory lock contention
+      - alert: HighAdvisoryLockContention
+        expr: |
+          sum(rate(advisory_locks_failed[5m]))
+          /
+          (sum(rate(advisory_locks_acquired[5m])) + sum(rate(advisory_locks_failed[5m]))) > 0.5
+        for: 5m
+        labels:
+          severity: info
+          service: rust-iss
+        annotations:
+          summary: "High advisory lock contention"
+          description: "{{ $value | humanizePercentage }} of lock attempts are failing (multiple instances running)"
+
+      # External API errors
+      - alert: ExternalAPIErrors
+        expr: |
+          (
+            rate(external_api_requests_total{status="error"}[10m])
+            /
+            rate(external_api_requests_total[10m])
+          ) > 0.2
+        for: 10m
+        labels:
+          severity: warning
+          service: rust-iss
+        annotations:
+          summary: "High external API error rate"
+          description: "{{ $labels.api }} API error rate is {{ $value | humanizePercentage }} (threshold: 20%)"
+
+      # Low cache hit rate
+      - alert: LowCacheHitRate
+        expr: |
+          (
+            rate(cache_hits_total[10m])
+            /
+            (rate(cache_hits_total[10m]) + rate(cache_misses_total[10m]))
+          ) < 0.5
+        for: 10m
+        labels:
+          severity: info
+          service: rust-iss
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is {{ $value | humanizePercentage }} for {{ $labels.cache_key }} (threshold: 50%)"
+
+      # Service down
+      - alert: ServiceDown
+        expr: up{job="rust-iss"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: rust-iss
+        annotations:
+          summary: "Rust ISS service is down"
+          description: "The Rust ISS microservice has been down for more than 1 minute"
+
+      # High HTTP request rate (potential DDoS)
+      - alert: HighHTTPRequestRate
+        expr: |
+          rate(http_requests_total[1m]) > 1000
+        for: 2m
+        labels:
+          severity: warning
+          service: rust-iss
+        annotations:
+          summary: "Unusually high HTTP request rate"
+          description: "Request rate is {{ $value }} req/s (threshold: 1000 req/s)"
+
+      # High HTTP error rate
+      - alert: HighHTTPErrorRate
+        expr: |
+          (
+            rate(http_requests_total{status=~"5.."}[5m])
+            /
+            rate(http_requests_total[5m])
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          service: rust-iss
+        annotations:
+          summary: "High HTTP 5xx error rate"
+          description: "HTTP 5xx error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
