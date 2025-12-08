@@ -124,3 +124,7 @@ impl IssService {
         self.iss_repo.get_history(start, end, limit).await
     }
 }
+
+#[cfg(test)]
+#[path = "iss_service_tests.rs"]
+mod iss_service_tests;

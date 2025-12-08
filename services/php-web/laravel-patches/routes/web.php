@@ -24,14 +24,14 @@ Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard
 Route::prefix('iss')->group(function () {
     Route::get('/', [IssController::class, 'index'])->name('iss.index');
     Route::get('/api/last', [IssController::class, 'apiLast'])->name('iss.api.last');
-    Route::get('/api/fetch', [IssController::class, 'apiFetch'])->name('iss.api.fetch');
+    Route::post('/api/fetch', [IssController::class, 'apiFetch'])->name('iss.api.fetch');
     Route::get('/api/history', [IssController::class, 'apiHistory'])->name('iss.api.history');
 });
 
 // OSDR страницы и API
 Route::prefix('osdr')->group(function () {
     Route::get('/', [OsdrController::class, 'index'])->name('osdr.index');
-    Route::get('/api/sync', [OsdrController::class, 'apiSync'])->name('osdr.api.sync');
+    Route::post('/api/sync', [OsdrController::class, 'apiSync'])->name('osdr.api.sync');
     Route::get('/api/list', [OsdrController::class, 'apiList'])->name('osdr.api.list');
 });
 
@@ -55,6 +55,6 @@ Route::get('/page/{slug}', [CmsController::class, 'show'])->name('cms.page');
 
 // Legacy CSV/XLSX интерфейс
 Route::prefix('legacy')->group(function () {
-    Route::get('/csv', [LegacyController::class, 'index'])->name('legacy.index');
-    Route::get('/csv/view/{filename}', [LegacyController::class, 'view'])->name('legacy.view');
+    Route::get('/', [LegacyController::class, 'index'])->name('legacy.index');
+    Route::get('/view/{filename}', [LegacyController::class, 'view'])->name('legacy.view');
 });

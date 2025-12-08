@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Services\IssService;
 use App\DTO\ApiResponseDTO;
+use App\Http\Requests\IssFetchRequest;
+use App\Http\Requests\IssHistoryRequest;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -58,7 +60,7 @@ class IssController extends Controller
     /**
      * API: Принудительное обновление позиции МКС
      */
-    public function apiFetch(): JsonResponse
+    public function apiFetch(IssFetchRequest $request): JsonResponse
     {
         try {
             $position = $this->issService->fetchPosition();
@@ -76,18 +78,14 @@ class IssController extends Controller
     /**
      * API: Получить историю позиций с фильтрацией
      */
-    public function apiHistory(Request $request): JsonResponse
+    public function apiHistory(IssHistoryRequest $request): JsonResponse
     {
         try {
-            $validated = $request->validate([
-                'start_date' => 'nullable|date',
-                'end_date' => 'nullable|date',
-                'limit' => 'nullable|integer|min:1|max:1000'
-            ]);
+            $validated = $request->validated();
 
             $history = $this->issService->getHistory(
-                startDate: $validated['start_date'] ?? null,
-                endDate: $validated['end_date'] ?? null,
+                startDate: $validated['start'] ?? null,
+                endDate: $validated['end'] ?? null,
                 limit: $validated['limit'] ?? 100
             );
 

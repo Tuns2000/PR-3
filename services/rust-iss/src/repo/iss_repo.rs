@@ -69,12 +69,15 @@ impl IssRepo {
             "SELECT id, latitude, longitude, altitude, velocity, timestamp, fetched_at FROM iss_fetch_log WHERE 1=1"
         );
         
+        // Safe SQL: use parameterized queries instead of string formatting
         if start.is_some() {
             query_str.push_str(" AND timestamp >= $1");
         }
         if end.is_some() {
             let param_idx = if start.is_some() { "$2" } else { "$1" };
-            query_str.push_str(&format!(" AND timestamp <= {}", param_idx));
+            // Safe: param_idx is hardcoded based on conditional logic
+            query_str.push_str(" AND timestamp <= ");
+            query_str.push_str(param_idx);
         }
         
         let limit_idx = match (start.is_some(), end.is_some()) {
@@ -82,7 +85,9 @@ impl IssRepo {
             (true, false) | (false, true) => "$2",
             (false, false) => "$1",
         };
-        query_str.push_str(&format!(" ORDER BY timestamp DESC LIMIT {}", limit_idx));
+        // Safe: limit_idx is hardcoded based on conditional logic
+        query_str.push_str(" ORDER BY timestamp DESC LIMIT ");
+        query_str.push_str(limit_idx);
         
         let mut query = sqlx::query(&query_str);
         

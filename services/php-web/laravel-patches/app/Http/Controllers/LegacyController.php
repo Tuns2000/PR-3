@@ -3,6 +3,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\LegacyViewRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
@@ -57,15 +58,11 @@ class LegacyController extends Controller
     /**
      * Просмотр содержимого CSV файла
      */
-    public function view(Request $request, $filename)
+    public function view(LegacyViewRequest $request, $filename)
     {
+        // Validation already done by LegacyViewRequest (regex, no path traversal)
         $csvDir = env('CSV_OUT_DIR', '/data/csv');
         $filePath = $csvDir . '/' . $filename;
-        
-        // Проверка безопасности (защита от path traversal)
-        if (!Str::endsWith($filename, ['.csv', '.xlsx']) || Str::contains($filename, '..')) {
-            abort(403, 'Invalid file type');
-        }
         
         if (!File::exists($filePath)) {
             abort(404, 'File not found');

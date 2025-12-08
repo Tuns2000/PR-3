@@ -84,3 +84,22 @@ pub struct CachedData<T> {
     pub data: T,
     pub cached_at: DateTime<Utc>,
 }
+
+// ===========================
+// JWST Model (for tests)
+// ===========================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JwstImage {
+    pub id: Option<i64>,
+    pub observation_id: String,
+    pub title: String,
+    pub description: Option<String>,
+    pub image_url: String,
+    pub observation_date: Option<NaiveDateTime>,
+    pub instrument: Option<String>,
+    pub updated_at: NaiveDateTime,
+}
+
+#[cfg(test)]
+mod tests;

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ProxyRequest;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Http;
@@ -19,8 +20,9 @@ class ProxyController extends Controller
      * Прокси для Rust API (без кэширования)
      * Используется для тестирования прямых запросов
      */
-    public function proxy(Request $request, string $path): JsonResponse
+    public function proxy(ProxyRequest $request, string $path): JsonResponse
     {
+        // Validation already done by ProxyRequest
         try {
             $fullUrl = "{$this->rustApiUrl}/{$path}";
             

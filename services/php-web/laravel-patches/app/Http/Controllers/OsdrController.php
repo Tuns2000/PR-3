@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Services\OsdrService;
 use App\DTO\ApiResponseDTO;
+use App\Http\Requests\OsdrSyncRequest;
+use App\Http\Requests\OsdrListRequest;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -23,7 +25,7 @@ class OsdrController extends Controller
 
             return view('osdr', [
                 'datasets' => $datasets,
-                'title' => 'NASA OSDR Datasets'
+                'title' => 'NASA OSDR'
             ]);
         } catch (\Exception $e) {
             return view('osdr', [
@@ -37,7 +39,7 @@ class OsdrController extends Controller
     /**
      * API: Синхронизация датасетов из NASA OSDR
      */
-    public function apiSync(): JsonResponse
+    public function apiSync(OsdrSyncRequest $request): JsonResponse
     {
         try {
             $result = $this->osdrService->syncDatasets();
@@ -55,15 +57,13 @@ class OsdrController extends Controller
     /**
      * API: Получить список датасетов
      */
-    public function apiList(Request $request): JsonResponse
+    public function apiList(OsdrListRequest $request): JsonResponse
     {
         try {
-            $validated = $request->validate([
-                'limit' => 'nullable|integer|min:1|max:200'
-            ]);
+            $validated = $request->validated();
 
             $datasets = $this->osdrService->getDatasets(
-                limit: $validated['limit'] ?? 50
+                limit: $validated['limit']
             );
 
             $data = array_map(fn($item) => $item->toArray(), $datasets);

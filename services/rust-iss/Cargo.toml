@@ -22,3 +22,9 @@ tower = "0.4"
 tower-http = { version = "0.5", features = ["trace", "cors"] }
 base64 = "0.21"
 
+[dev-dependencies]
+# Testing dependencies
+tokio-test = "0.4"
+mockito = "1.2"
+tower = { version = "0.4", features = ["util"] }
+
