@@ -1,23 +1,19 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-// ===========================
-// ISS Models
-// ===========================
-
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IssPosition {
-    pub id: i32,
+    pub id: Option<i32>, // ✅ БЫЛО: Option<i32>, теперь просто i32 при чтении из БД
     pub latitude: f64,
     pub longitude: f64,
     pub altitude: f64,
     pub velocity: f64,
-    pub timestamp: DateTime<Utc>, // TIMESTAMPTZ в PostgreSQL
-    pub fetched_at: DateTime<Utc>, // TIMESTAMPTZ
+    pub timestamp: NaiveDateTime,
+    pub fetched_at: NaiveDateTime,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IssApiResponse {
     pub latitude: f64,
     pub longitude: f64,
@@ -27,7 +23,7 @@ pub struct IssApiResponse {
 }
 
 #[derive(Debug, Validate, Deserialize)]
-pub struct IssFilterQuery {
+pub struct IssHistoryQuery {
     #[validate(range(min = 1, max = 1000))]
     pub limit: Option<i32>,
     pub start_date: Option<DateTime<Utc>>,
@@ -40,12 +36,12 @@ pub struct IssFilterQuery {
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct OsdrDataset {
-    pub id: i32,
+    pub id: Option<i32>, // ✅ БЫЛО: Option<i32>, теперь просто i32 при чтении из БД
     pub dataset_id: String,
     pub title: String,
     pub description: Option<String>,
-    pub release_date: Option<DateTime<Utc>>,
-    pub updated_at: DateTime<Utc>,
+    pub release_date: Option<NaiveDateTime>,
+    pub updated_at: NaiveDateTime,
 }
 
 #[derive(Debug, Deserialize)]

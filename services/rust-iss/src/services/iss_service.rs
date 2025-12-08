@@ -29,13 +29,13 @@ impl IssService {
         }
 
         // Кэш промах - читаем из БД
-        if let Some(pos) = self.iss_repo.get_last().await? {
+        if let Some(pos) = self.iss_repo.get_latest().await? {
             // Сохраняем в кэш
             self.cache_repo.set("iss:last", &pos, 300).await?;
             return Ok(pos);
         }
 
-        Err(ApiError::NotFound)
+        Err(ApiError::NotFound("ISS position not found".to_string()))
     }
 
     /// Загрузить данные из внешнего API и сохранить в БД
@@ -52,17 +52,17 @@ impl IssService {
             .ok_or_else(|| ApiError::InternalError("Invalid timestamp".to_string()))?;
 
         let position = IssPosition {
-            id: 0, // будет заполнено БД
+            id: None,
             latitude: api_data.latitude,
             longitude: api_data.longitude,
             altitude: api_data.altitude,
             velocity: api_data.velocity,
-            timestamp,
-            fetched_at: Utc::now(),
+            timestamp: timestamp.naive_utc(),
+            fetched_at: chrono::Utc::now().naive_utc(),
         };
 
         // UPSERT в БД (предотвращает дубликаты по timestamp)
-        self.iss_repo.upsert(&position).await?;
+        self.iss_repo.save(&position).await?;
 
         // Инвалидируем кэш
         self.cache_repo.delete("iss:last").await?;
@@ -72,9 +72,51 @@ impl IssService {
         Ok(position)
     }
 
+    /// Получить текущую позицию
+    pub async fn get_current(&mut self) -> Result<IssPosition, ApiError> {
+        // Попытка получить из кэша
+        if let Some(cached) = self.cache_repo.get::<IssPosition>("iss:current").await? {
+            return Ok(cached);
+        }
+
+        // ✅ ИСПРАВЛЕНО: get_last -> get_latest
+        if let Some(pos) = self.iss_repo.get_latest().await? {
+            if chrono::Utc::now().naive_utc().signed_duration_since(pos.fetched_at).num_seconds() < 300 {
+                self.cache_repo.set("iss:current", &pos, 60).await?;
+                return Ok(pos);
+            }
+        }
+
+        // ✅ ИСПРАВЛЕНО: NotFound теперь принимает String
+        Err(ApiError::NotFound("ISS position not found".to_string()))
+    }
+
+    /// Загрузить данные из внешнего API и сохранить в БД
+    pub async fn fetch_and_save(&mut self) -> Result<IssPosition, ApiError> {
+        let external_data = self.iss_client.fetch_current_position().await?;
+
+        let position = IssPosition {
+            id: None,
+            latitude: external_data.latitude,
+            longitude: external_data.longitude,
+            altitude: external_data.altitude,
+            velocity: external_data.velocity,
+            timestamp: chrono::Utc::now().naive_utc(),
+            fetched_at: chrono::Utc::now().naive_utc(),
+        };
+
+        // ✅ ИСПРАВЛЕНО: upsert -> save
+        self.iss_repo.save(&position).await?;
+
+        self.cache_repo.set("iss:current", &position, 60).await?;
+        self.cache_repo.delete("iss:history").await?;
+
+        Ok(position)
+    }
+
     /// Получить историю позиций с фильтрацией
     pub async fn get_history(
-        &self,
+        &mut self,
         start: Option<DateTime<Utc>>,
         end: Option<DateTime<Utc>>,
         limit: i32,

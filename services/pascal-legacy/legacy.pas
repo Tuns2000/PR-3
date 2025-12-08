@@ -3,7 +3,7 @@ program legacy;
 {$mode objfpc}{$H+}
 
 uses
-  SysUtils, DateUtils, Classes, PQConnection, SQLDB;
+  SysUtils, DateUtils, Math, PQConnection, SQLDB;
 
 type
   TTelemetryRecord = record
@@ -14,158 +14,232 @@ type
   end;
 
 var
-  DBConn: TPQConnection;
-  SQLQuery: TSQLQuery;
-  SQLTransaction: TSQLTransaction;
+  Connection: TPQConnection;
+  Transaction: TSQLTransaction;
+  Query: TSQLQuery;
+  CSVFile: Text;
+  CSVFilePath: String;
   CSVOutDir: String;
+  TelemetryData: TTelemetryRecord;
+  PGHost, PGPort, PGUser, PGPassword, PGDatabase: String;
 
-function ConnectToDB: Boolean;
-var
-  Host, Port, User, Pass, DBName: String;
+procedure LogInfo(const Msg: String);
+begin
+  WriteLn('[INFO] ', Msg);
+end;
+
+procedure LogError(const Msg: String);
+begin
+  WriteLn(StdErr, '[ERROR] ', Msg);
+end;
+
+procedure LogWarn(const Msg: String);
+begin
+  WriteLn(StdErr, '[WARN] ', Msg);
+end;
+
+function ConnectToDatabase: Boolean;
 begin
   Result := False;
-  
-  Host := GetEnvironmentVariable('PGHOST');
-  Port := GetEnvironmentVariable('PGPORT');
-  User := GetEnvironmentVariable('PGUSER');
-  Pass := GetEnvironmentVariable('PGPASSWORD');
-  DBName := GetEnvironmentVariable('PGDATABASE');
-  
-  if (Host = '') or (Port = '') or (User = '') or (DBName = '') then
-  begin
-    WriteLn(StdErr, '[ERROR] Missing PostgreSQL environment variables');
-    Exit;
-  end;
-  
   try
-    DBConn := TPQConnection.Create(nil);
-    DBConn.HostName := Host;
-    DBConn.DatabaseName := DBName;
-    DBConn.UserName := User;
-    DBConn.Password := Pass;
-    DBConn.Port := StrToInt(Port);
+    Connection := TPQConnection.Create(nil);
+    Transaction := TSQLTransaction.Create(nil);
+    Query := TSQLQuery.Create(nil);
+
+    Connection.HostName := PGHost;
+    Connection.DatabaseName := PGDatabase;
+    Connection.UserName := PGUser;
+    Connection.Password := PGPassword;
     
-    SQLTransaction := TSQLTransaction.Create(nil);
-    SQLTransaction.DataBase := DBConn;
-    DBConn.Transaction := SQLTransaction;
-    
-    SQLQuery := TSQLQuery.Create(nil);
-    SQLQuery.DataBase := DBConn;
-    SQLQuery.Transaction := SQLTransaction;
-    
-    DBConn.Open;
-    WriteLn('[INFO] ✅ Connected to PostgreSQL');
+    if PGPort <> '' then
+      Connection.Params.Add('port=' + PGPort);
+
+    Transaction.DataBase := Connection;
+    Query.DataBase := Connection;
+    Query.Transaction := Transaction;
+
+    Connection.Open;
+    Transaction.Active := True;
+
+    LogInfo('Connected to PostgreSQL');
     Result := True;
   except
     on E: Exception do
     begin
-      WriteLn(StdErr, '[ERROR] ❌ DB connection failed: ', E.Message);
+      LogError('Database connection failed: ' + E.Message);
       Result := False;
     end;
   end;
 end;
 
-function GenerateTelemetry: TTelemetryRecord;
+procedure DisconnectFromDatabase;
 begin
-  Randomize;
-  Result.RecordedAt := Now;
-  Result.Voltage := 12.5 + Random * 0.5;
-  Result.Temp := 20.0 + Random * 5.0;
-  Result.SourceFile := 'pascal-legacy';
+  try
+    if Assigned(Query) then
+      Query.Free;
+    if Assigned(Transaction) then
+    begin
+      if Transaction.Active then
+        Transaction.Commit;
+      Transaction.Free;
+    end;
+    if Assigned(Connection) then
+    begin
+      if Connection.Connected then
+        Connection.Close;
+      Connection.Free;
+    end;
+    LogInfo('Disconnected from PostgreSQL');
+  except
+    on E: Exception do
+      LogError('Disconnect error: ' + E.Message);
+  end;
 end;
 
-function SaveToDB(const Rec: TTelemetryRecord): Boolean;
+procedure GenerateTelemetryData(var Data: TTelemetryRecord);
+begin
+  Data.RecordedAt := Now;
+  Data.Voltage := 12.5 + Random * 0.5;
+  Data.Temp := 20.0 + Random * 5.0;
+  Data.SourceFile := 'pascal-legacy';
+end;
+
+function SaveToDatabase(const Data: TTelemetryRecord): Boolean;
+var
+  SQL: String;
 begin
   Result := False;
   try
-    SQLQuery.SQL.Text := 
-      'INSERT INTO telemetry_legacy (recorded_at, voltage, temp, source_file) ' +
-      'VALUES (:recorded_at, :voltage, :temp, :source_file)';
-    SQLQuery.ParamByName('recorded_at').AsDateTime := Rec.RecordedAt;
-    SQLQuery.ParamByName('voltage').AsFloat := Rec.Voltage;
-    SQLQuery.ParamByName('temp').AsFloat := Rec.Temp;
-    SQLQuery.ParamByName('source_file').AsString := Rec.SourceFile;
-    SQLQuery.ExecSQL;
-    SQLTransaction.Commit;
-    
-    WriteLn('[INFO] ✅ Saved to DB: voltage=', Rec.Voltage:0:2, 'V, temp=', Rec.Temp:0:2, '°C');
+    SQL := 'INSERT INTO telemetry_legacy (recorded_at, voltage, temp, source_file) ' +
+           'VALUES (:recorded_at, :voltage, :temp, :source_file)';
+
+    Query.Close;
+    Query.SQL.Clear;
+    Query.SQL.Add(SQL);
+    Query.ParamByName('recorded_at').AsDateTime := Data.RecordedAt;
+    Query.ParamByName('voltage').AsFloat := Data.Voltage;
+    Query.ParamByName('temp').AsFloat := Data.Temp;
+    Query.ParamByName('source_file').AsString := Data.SourceFile;
+    Query.ExecSQL;
+
+    Transaction.Commit;
+
+    LogInfo(Format('Saved to DB: voltage=%.2fV, temp=%.2f°C', [Data.Voltage, Data.Temp]));
     Result := True;
   except
     on E: Exception do
     begin
-      WriteLn(StdErr, '[ERROR] ❌ DB save failed: ', E.Message);
-      SQLTransaction.Rollback;
+      LogError('Database insert failed: ' + E.Message);
+      try
+        Transaction.Rollback;
+      except
+      end;
+      Result := False;
     end;
   end;
 end;
 
-function SaveToCSV(const Rec: TTelemetryRecord): Boolean;
+function SaveToCSV(const Data: TTelemetryRecord): Boolean;
 var
-  CSVFile: TextFile;
-  FileName: String;
-  FileExists: Boolean;
+  DateStr: String;
+  TimestampStr: String;
+  CSVExists: Boolean;
 begin
   Result := False;
-  FileName := CSVOutDir + '/telemetry_' + FormatDateTime('yyyymmdd', Rec.RecordedAt) + '.csv';
-  FileExists := SysUtils.FileExists(FileName);
-  
   try
-    AssignFile(CSVFile, FileName);
-    if FileExists then
+    DateStr := FormatDateTime('yyyymmdd', Data.RecordedAt);
+    CSVFilePath := CSVOutDir + '/telemetry_' + DateStr + '.csv';
+
+    CSVExists := SysUtils.FileExists(CSVFilePath);
+
+    Assign(CSVFile, CSVFilePath);
+    if CSVExists then
       Append(CSVFile)
     else
       Rewrite(CSVFile);
-    
-    if not FileExists then
+
+    if not CSVExists then
       WriteLn(CSVFile, 'Timestamp,Voltage,Temperature,SourceFile');
-    
-    WriteLn(CSVFile, 
-      FormatDateTime('yyyy-mm-dd hh:nn:ss', Rec.RecordedAt), ',',
-      Rec.Voltage:0:2, ',',
-      Rec.Temp:0:2, ',',
-      '"', Rec.SourceFile, '"'
-    );
-    
-    CloseFile(CSVFile);
-    WriteLn('[INFO] ✅ Saved to CSV: ', FileName);
+
+    TimestampStr := FormatDateTime('yyyy-mm-dd hh:nn:ss', Data.RecordedAt);
+    WriteLn(CSVFile, Format('%s,%.2f,%.2f,"%s"',
+      [TimestampStr, Data.Voltage, Data.Temp, Data.SourceFile]));
+
+    Close(CSVFile);
+
+    LogInfo('Saved to CSV: ' + CSVFilePath);
     Result := True;
   except
     on E: Exception do
     begin
-      WriteLn(StdErr, '[ERROR] ❌ CSV save failed: ', E.Message);
+      LogError('CSV write failed: ' + E.Message);
+      try
+        Close(CSVFile);
+      except
+      end;
+      Result := False;
     end;
   end;
 end;
 
+procedure Run;
 var
-  Record: TTelemetryRecord;
+  DBConnected: Boolean;
 begin
-  WriteLn('[INFO] 🚀 Pascal Legacy: Single generation mode');
-  
+  LogInfo('Starting telemetry generation...');
+
+  PGHost := GetEnvironmentVariable('PGHOST');
+  PGPort := GetEnvironmentVariable('PGPORT');
+  PGUser := GetEnvironmentVariable('PGUSER');
+  PGPassword := GetEnvironmentVariable('PGPASSWORD');
+  PGDatabase := GetEnvironmentVariable('PGDATABASE');
   CSVOutDir := GetEnvironmentVariable('CSV_OUT_DIR');
+
   if CSVOutDir = '' then
     CSVOutDir := '/data/csv';
-  
-  if not DirectoryExists(CSVOutDir) then
-    ForceDirectories(CSVOutDir);
-  
-  if not ConnectToDB then
+
+  if (PGHost = '') or (PGUser = '') or (PGDatabase = '') then
   begin
-    WriteLn(StdErr, '[ERROR] ❌ Failed to connect to DB');
+    LogError('Missing required environment variables (PGHOST, PGUSER, PGDATABASE)');
     Halt(1);
   end;
-  
-  Record := GenerateTelemetry;
-  
-  if not SaveToDB(Record) then
-    WriteLn(StdErr, '[WARN] ⚠️  DB save failed');
-  
-  if not SaveToCSV(Record) then
-    WriteLn(StdErr, '[WARN] ⚠️  CSV save failed');
-  
-  SQLQuery.Free;
-  SQLTransaction.Free;
-  DBConn.Free;
-  
-  WriteLn('[INFO] ✅ Generation complete');
+
+  if not DirectoryExists(CSVOutDir) then
+  begin
+    if not CreateDir(CSVOutDir) then
+    begin
+      LogError('Failed to create CSV directory: ' + CSVOutDir);
+      Halt(1);
+    end;
+  end;
+
+  DBConnected := ConnectToDatabase;
+
+  GenerateTelemetryData(TelemetryData);
+
+  if DBConnected then
+  begin
+    if not SaveToDatabase(TelemetryData) then
+      LogWarn('Failed to save to database, continuing...');
+  end
+  else
+    LogWarn('Skipping database save (not connected)');
+
+  if not SaveToCSV(TelemetryData) then
+  begin
+    LogError('Failed to save to CSV');
+    if DBConnected then
+      DisconnectFromDatabase;
+    Halt(1);
+  end;
+
+  if DBConnected then
+    DisconnectFromDatabase;
+
+  LogInfo('Generation complete');
+end;
+
+begin
+  Randomize;
+  Run;
 end.

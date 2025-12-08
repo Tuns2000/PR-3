@@ -63,7 +63,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Создание репозиториев
     let iss_repo = IssRepo::new(pg_pool.clone());
     let osdr_repo = OsdrRepo::new(pg_pool.clone());
-    let cache_repo = CacheRepo::new(redis_conn.clone());
+    let cache_repo = CacheRepo::new(&config.redis_url)?;
 
     // Создание сервисов
     let iss_service = Arc::new(Mutex::new(IssService::new(
@@ -90,7 +90,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let spacex_service = Arc::new(Mutex::new(SpaceXService::new(
         spacex_client,
-        cache_repo,
+        cache_repo.clone(),
     )));
 
     // Создание rate limiter

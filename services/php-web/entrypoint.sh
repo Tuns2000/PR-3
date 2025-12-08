@@ -1,26 +1,37 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -e
 
-APP_DIR="/var/www/html"
-PATCH_DIR="/opt/laravel-patches"
+echo "Starting PHP-FPM entrypoint..."
 
-echo "[php] init start"
+# Ожидание PostgreSQL
+echo "Waiting for PostgreSQL..."
+until PGPASSWORD=$DB_PASSWORD psql -h "$DB_HOST" -U "$DB_USERNAME" -d "$DB_DATABASE" -c '\q' 2>/dev/null; do
+  echo "PostgreSQL is unavailable - sleeping"
+  sleep 2
+done
+echo "PostgreSQL is up!"
 
-if [ ! -f "$APP_DIR/artisan" ]; then
-  echo "[php] creating laravel skeleton"
-  composer create-project --no-interaction --prefer-dist laravel/laravel:^11 "$APP_DIR"
-  cp "$APP_DIR/.env.example" "$APP_DIR/.env" || true
-  sed -i 's|APP_NAME=Laravel|APP_NAME=ISSOSDR|g' "$APP_DIR/.env" || true
-  php "$APP_DIR/artisan" key:generate || true
+# Создание Laravel проекта если его нет
+if [ ! -f "artisan" ]; then
+    echo "Installing Laravel..."
+    composer create-project --prefer-dist laravel/laravel:^11.0 .
+    composer require guzzlehttp/guzzle predis/predis
 fi
 
-if [ -d "$PATCH_DIR" ]; then
-  echo "[php] applying patches"
-  rsync -a "$PATCH_DIR/" "$APP_DIR/"
+# Применение патчей из laravel-patches
+if [ -d "/opt/laravel-patches" ]; then
+    echo "Applying Laravel patches..."
+    rsync -av --exclude='*.md' /opt/laravel-patches/ /var/www/html/
 fi
 
-chown -R www-data:www-data "$APP_DIR"
-chmod -R 775 "$APP_DIR/storage" "$APP_DIR/bootstrap/cache" || true
+# Настройка прав доступа
+chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true
 
-echo "[php] starting php-fpm"
-php-fpm -F
+# Миграции БД
+if [ -f "artisan" ]; then
+    echo "Running migrations..."
+    php artisan migrate --force || echo "Migration failed (may be already applied)"
+fi
+
+echo "Starting PHP-FPM..."
+exec php-fpm

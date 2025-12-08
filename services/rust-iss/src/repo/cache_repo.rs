@@ -1,44 +1,81 @@
-use crate::domain::error::ApiError;
-use redis::{aio::MultiplexedConnection, AsyncCommands};
-use serde::{de::DeserializeOwned, Serialize};
+use redis::aio::Connection;
+use redis::{Client, RedisError};
+use serde::{Deserialize, Serialize};
 
+#[derive(Clone)]
 pub struct CacheRepo {
-    conn: MultiplexedConnection,
+    client: Client,
 }
 
 impl CacheRepo {
-    pub fn new(conn: MultiplexedConnection) -> Self {
-        Self { conn }
+    pub fn new(redis_url: &str) -> Result<Self, RedisError> {
+        let client = Client::open(redis_url)?;
+        Ok(Self { client })
     }
 
-    pub async fn get<T: DeserializeOwned>(&mut self, key: &str) -> Result<Option<T>, ApiError> {
-        let data: Option<String> = self.conn.get(key).await?;
-        
-        match data {
-            Some(json) => {
-                let parsed = serde_json::from_str(&json)
-                    .map_err(|e| ApiError::InternalError(format!("JSON parse error: {}", e)))?;
-                Ok(Some(parsed))
-            }
+    pub async fn get_connection(&self) -> Result<Connection, RedisError> {
+        self.client.get_async_connection().await
+    }
+
+    /// Получить значение из кэша
+    pub async fn get<T: for<'de> Deserialize<'de>>(
+        &self,
+        key: &str,
+    ) -> Result<Option<T>, RedisError> {
+        let mut conn = self.get_connection().await?;
+        let value: Option<String> = redis::cmd("GET").arg(key).query_async(&mut conn).await?;
+
+        match value {
+            Some(json) => Ok(serde_json::from_str(&json).ok()),
             None => Ok(None),
         }
     }
 
+    /// Сохранить значение в кэш с TTL
     pub async fn set<T: Serialize>(
-        &mut self,
+        &self,
         key: &str,
         value: &T,
         ttl_seconds: usize,
-    ) -> Result<(), ApiError> {
-        let json = serde_json::to_string(value)
-            .map_err(|e| ApiError::InternalError(format!("JSON serialize error: {}", e)))?;
-        
-        self.conn.set_ex(key, json, ttl_seconds).await?;
+    ) -> Result<(), RedisError> {
+        let mut conn = self.get_connection().await?;
+        let json = serde_json::to_string(value).unwrap();
+
+        redis::cmd("SETEX")
+            .arg(key)
+            .arg(ttl_seconds as u64)
+            .arg(json)
+            .query_async::<_, ()>(&mut conn)
+            .await?;
+
         Ok(())
     }
 
-    pub async fn delete(&mut self, key: &str) -> Result<(), ApiError> {
-        self.conn.del(key).await?;
+    /// Удалить значение из кэша
+    pub async fn delete(&self, key: &str) -> Result<(), RedisError> {
+        let mut conn = self.get_connection().await?;
+        redis::cmd("DEL")
+            .arg(key)
+            .query_async::<_, ()>(&mut conn)
+            .await?;
         Ok(())
+    }
+
+    /// Проверить существование ключа
+    pub async fn exists(&self, key: &str) -> Result<bool, RedisError> {
+        let mut conn = self.get_connection().await?;
+        let result: i32 = redis::cmd("EXISTS").arg(key).query_async(&mut conn).await?;
+        Ok(result > 0)
+    }
+
+    /// Установить TTL для существующего ключа
+    pub async fn expire(&self, key: &str, ttl_seconds: usize) -> Result<bool, RedisError> {
+        let mut conn = self.get_connection().await?;
+        let result: i32 = redis::cmd("EXPIRE")
+            .arg(key)
+            .arg(ttl_seconds as u64)
+            .query_async(&mut conn)
+            .await?;
+        Ok(result > 0)
     }
 }

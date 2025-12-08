@@ -16,6 +16,6 @@ FROM debian:12-slim
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 ENV RUST_LOG=info
 WORKDIR /app
-COPY --from=build /app/target/release/rust_iss /usr/local/bin/rust_iss
+COPY --from=build /app/target/release/rust-iss /usr/local/bin/rust-iss
 EXPOSE 3000
-CMD ["rust_iss"]
+CMD ["rust-iss"]

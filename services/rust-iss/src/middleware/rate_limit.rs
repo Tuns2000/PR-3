@@ -22,14 +22,13 @@ pub fn create_rate_limiter(requests_per_minute: u32) -> SharedRateLimiter {
 }
 
 pub async fn rate_limit_middleware(
-    limiter: Arc<RateLimiter<NotKeyed, InMemoryState, DefaultClock>>,
+    axum::extract::State(limiter): axum::extract::State<SharedRateLimiter>,
     request: Request,
     next: Next,
 ) -> Response {
     if limiter.check().is_err() {
         let error_response = ApiResponse::<()>::error(
-            "RATE_LIMIT_EXCEEDED",
-            "Too many requests, please try again later".to_string(),
+            "RATE_LIMIT_EXCEEDED: Too many requests, please try again later".to_string(),
         );
         return (StatusCode::TOO_MANY_REQUESTS, Json(error_response)).into_response();
     }

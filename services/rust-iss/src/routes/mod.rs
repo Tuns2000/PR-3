@@ -1,7 +1,7 @@
 use crate::{
     handlers::{
         health_check, 
-        get_last_position, fetch_position, get_history, SharedIssService,
+        get_current_position, fetch_position, get_history,
         sync_datasets, list_datasets, SharedOsdrService,
         get_apod, get_neo, get_donki_flr, get_donki_cme, SharedNasaService,
         get_images, SharedJwstService,
@@ -19,6 +19,12 @@ use tower_http::{
     trace::TraceLayer,
 };
 
+use crate::services::IssService;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+
+pub type SharedIssService = Arc<Mutex<IssService>>;
+
 pub struct AppState {
     pub iss_service: SharedIssService,
     pub osdr_service: SharedOsdrService,
@@ -28,13 +34,26 @@ pub struct AppState {
     pub rate_limiter: SharedRateLimiter,
 }
 
+impl Clone for AppState {
+    fn clone(&self) -> Self {
+        Self {
+            iss_service: self.iss_service.clone(),
+            osdr_service: self.osdr_service.clone(),
+            nasa_service: self.nasa_service.clone(),
+            jwst_service: self.jwst_service.clone(),
+            spacex_service: self.spacex_service.clone(),
+            rate_limiter: self.rate_limiter.clone(),
+        }
+    }
+}
+
 pub fn create_router(state: AppState) -> Router {
     // ISS routes
     let iss_routes = Router::new()
-        .route("/last", get(get_last_position))
+        .route("/current", get(get_current_position))
         .route("/fetch", get(fetch_position))
         .route("/history", get(get_history))
-        .with_state(state.iss_service.clone());
+        .with_state(state.clone());
 
     // OSDR routes
     let osdr_routes = Router::new()
@@ -69,11 +88,11 @@ pub fn create_router(state: AppState) -> Router {
         .nest("/jwst", jwst_routes)
         .nest("/spacex", spacex_routes)
         // Middleware
+        .layer(TraceLayer::new_for_http())
+        .layer(CorsLayer::permissive())
         .layer(middleware::from_fn(request_id_middleware))
         .layer(middleware::from_fn_with_state(
             state.rate_limiter.clone(),
             rate_limit_middleware,
         ))
-        .layer(TraceLayer::new_for_http())
-        .layer(CorsLayer::permissive())
 }
