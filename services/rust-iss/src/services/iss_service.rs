@@ -58,7 +58,7 @@ impl IssService {
             altitude: api_data.altitude,
             velocity: api_data.velocity,
             timestamp: timestamp.naive_utc(),
-            fetched_at: chrono::Utc::now().naive_utc(),
+            fetched_at: chrono::Utc::now(),
         };
 
         // UPSERT в БД (предотвращает дубликаты по timestamp)
@@ -81,7 +81,7 @@ impl IssService {
 
         // ✅ ИСПРАВЛЕНО: get_last -> get_latest
         if let Some(pos) = self.iss_repo.get_latest().await? {
-            if chrono::Utc::now().naive_utc().signed_duration_since(pos.fetched_at).num_seconds() < 300 {
+            if chrono::Utc::now().signed_duration_since(pos.fetched_at).num_seconds() < 300 {
                 self.cache_repo.set("iss:current", &pos, 60).await?;
                 return Ok(pos);
             }
@@ -102,7 +102,7 @@ impl IssService {
             altitude: external_data.altitude,
             velocity: external_data.velocity,
             timestamp: chrono::Utc::now().naive_utc(),
-            fetched_at: chrono::Utc::now().naive_utc(),
+            fetched_at: chrono::Utc::now(),
         };
 
         // ✅ ИСПРАВЛЕНО: upsert -> save

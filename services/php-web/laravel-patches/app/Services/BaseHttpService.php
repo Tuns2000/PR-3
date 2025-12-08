@@ -18,46 +18,35 @@ abstract class BaseHttpService
      */
     protected function get(string $url, array $params = []): array
     {
-        $attempt = 0;
+        try {
+            Log::info("HTTP GET", [
+                'url' => $url,
+                'params' => $params
+            ]);
 
-        while ($attempt < $this->retries) {
-            try {
-                Log::info("HTTP GET", [
-                    'url' => $url,
-                    'attempt' => $attempt + 1,
-                    'params' => $params
-                ]);
+            $response = Http::timeout($this->timeout)
+                ->retry($this->retries, $this->retryDelay)
+                ->get($url, $params);
 
-                $response = Http::timeout($this->timeout)
-                    ->retry($this->retries, $this->retryDelay)
-                    ->get($url, $params);
-
-                if ($response->successful()) {
-                    return $response->json();
-                }
-
-                throw new ApiException(
-                    "HTTP {$response->status()}: {$response->body()}",
-                    $response->status()
-                );
-
-            } catch (\Exception $e) {
-                $attempt++;
-                
-                if ($attempt >= $this->retries) {
-                    Log::error("HTTP GET failed after {$this->retries} retries", [
-                        'url' => $url,
-                        'error' => $e->getMessage()
-                    ]);
-                    throw new ApiException(
-                        "Failed to fetch data from {$url}: {$e->getMessage()}",
-                        500,
-                        $e
-                    );
-                }
-
-                usleep($this->retryDelay * 1000 * $attempt); // Exponential backoff
+            if ($response->successful()) {
+                return $response->json();
             }
+
+            throw new ApiException(
+                "HTTP {$response->status()}: {$response->body()}",
+                $response->status()
+            );
+
+        } catch (\Exception $e) {
+            Log::error("HTTP GET failed", [
+                'url' => $url,
+                'error' => $e->getMessage()
+            ]);
+            throw new ApiException(
+                "Failed to fetch data from {$url}: {$e->getMessage()}",
+                500,
+                $e
+            );
         }
     }
 }

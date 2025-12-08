@@ -4,13 +4,13 @@ use validator::Validate;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IssPosition {
-    pub id: Option<i32>, // ✅ БЫЛО: Option<i32>, теперь просто i32 при чтении из БД
+    pub id: Option<i64>,
     pub latitude: f64,
     pub longitude: f64,
     pub altitude: f64,
     pub velocity: f64,
     pub timestamp: NaiveDateTime,
-    pub fetched_at: NaiveDateTime,
+    pub fetched_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,7 +36,7 @@ pub struct IssHistoryQuery {
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct OsdrDataset {
-    pub id: Option<i32>, // ✅ БЫЛО: Option<i32>, теперь просто i32 при чтении из БД
+    pub id: Option<i64>,
     pub dataset_id: String,
     pub title: String,
     pub description: Option<String>,
