@@ -10,8 +10,8 @@ use App\Exceptions\ApiException;
 abstract class BaseHttpService
 {
     protected int $timeout = 30;
-    protected int $retries = 3;
-    protected int $retryDelay = 1000; // ms
+    protected int $retries = 1;
+    protected int $retryDelay = 500; // ms
 
     /**
      * Выполнить GET запрос с retry стратегией

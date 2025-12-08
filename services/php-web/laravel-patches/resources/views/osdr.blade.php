@@ -80,11 +80,19 @@ async function syncDatasets() {
         const response = await fetch('{{ route('osdr.api.sync') }}');
         const data = await response.json();
         
-        if (data.ok) {
+        if (data.success) {
             statusEl.innerHTML = '<span class="text-success">✓ Synced successfully!</span>';
             setTimeout(() => location.reload(), 1500);
         } else {
-            statusEl.innerHTML = '<span class="text-danger">✗ Error: ' + data.error.message + '</span>';
+            const errorMsg = (typeof data.error === 'object' && data.error.message) 
+                ? data.error.message 
+                : (data.error || 'Unknown error');
+            // Показать пользователю что NASA API недоступен
+            if (errorMsg.includes('OSDR API failed') || errorMsg.includes('JSON parse error')) {
+                statusEl.innerHTML = '<span class="text-warning">⚠ NASA OSDR API temporarily unavailable</span>';
+            } else {
+                statusEl.innerHTML = '<span class="text-danger">✗ Error: ' + errorMsg + '</span>';
+            }
         }
     } catch (error) {
         statusEl.innerHTML = '<span class="text-danger">✗ Failed: ' + error.message + '</span>';

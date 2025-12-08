@@ -15,7 +15,7 @@ class OsdrService extends BaseHttpService
     {
         $this->rustApiUrl = env('RUST_ISS_URL', 'http://rust_iss:3000');
         $this->repository = $repository;
-        $this->timeout = 30;
+        $this->timeout = 10;
     }
 
     /**
@@ -27,8 +27,8 @@ class OsdrService extends BaseHttpService
         
         $data = $this->get("{$this->rustApiUrl}/osdr/sync");
         
-        if (!$data['ok']) {
-            throw new \Exception($data['error']['message'] ?? 'Unknown error');
+        if (!$data['success']) {
+            throw new \Exception($data['error'] ?? 'Unknown error');
         }
 
         return $data['data'];
@@ -44,7 +44,7 @@ class OsdrService extends BaseHttpService
             try {
                 $data = $this->get("{$this->rustApiUrl}/osdr/list");
                 
-                if ($data['ok']) {
+                if (isset($data['success']) && $data['success']) {
                     return array_map(
                         fn($item) => OsdrDatasetDTO::fromArray($item),
                         $data['data']

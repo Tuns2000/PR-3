@@ -11,7 +11,7 @@ pub struct OsdrClient {
 impl OsdrClient {
     pub fn new(base_url: String, api_key: String) -> Result<Self, ApiError> {
         let client = Client::builder()
-            .timeout(Duration::from_secs(30))
+            .timeout(Duration::from_secs(10))
             .user_agent("CassiopeiaBot/1.0 (Space Data Collector)")
             .build()
             .map_err(|e| ApiError::InternalError(format!("Failed to create HTTP client: {}", e)))?;
@@ -25,7 +25,7 @@ impl OsdrClient {
 
     pub async fn fetch_datasets(&self) -> Result<OsdrApiResponse, ApiError> {
         let mut retries = 0;
-        let max_retries = 3;
+        let max_retries = 1;
 
         loop {
             match self.try_fetch().await {
