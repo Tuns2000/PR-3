@@ -96,9 +96,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Создание rate limiter
     let rate_limiter = create_rate_limiter(config.rate_limit_per_minute);
 
-    // Запуск планировщика
+    // Запуск планировщика с advisory locks
     let scheduler = Arc::new(Scheduler::new(
         config.clone(),
+        pg_pool.clone(), // Pass pool for advisory locks
         iss_service.clone(),
         osdr_service.clone(),
         nasa_service.clone(),

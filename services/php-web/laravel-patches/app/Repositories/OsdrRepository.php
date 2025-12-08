@@ -98,4 +98,66 @@ class OsdrRepository
             $rows->toArray()
         );
     }
+
+    /**
+     * Batch insert/update datasets using single UPSERT query
+     * More efficient than multiple individual upsert() calls
+     * 
+     * @param array $datasets Array of datasets to upsert
+     * @param int $batchSize Number of records per batch (default 100)
+     * @return int Total number of affected rows
+     */
+    public function batchUpsert(array $datasets, int $batchSize = 100): int
+    {
+        if (empty($datasets)) {
+            return 0;
+        }
+
+        $totalAffected = 0;
+        $batches = array_chunk($datasets, $batchSize);
+
+        DB::beginTransaction();
+        try {
+            foreach ($batches as $batch) {
+                $records = array_map(function ($dataset) {
+                    return [
+                        'dataset_id' => $dataset['dataset_id'],
+                        'title' => $dataset['title'],
+                        'description' => $dataset['description'] ?? null,
+                        'release_date' => $dataset['release_date'] ?? null,
+                        'updated_at' => now(),
+                    ];
+                }, $batch);
+
+                // PostgreSQL UPSERT: ON CONFLICT DO UPDATE
+                $affected = DB::table('osdr_items')->upsert(
+                    $records,
+                    ['dataset_id'], // Conflict column
+                    ['title', 'description', 'release_date', 'updated_at'] // Update columns
+                );
+
+                $totalAffected += $affected;
+            }
+
+            DB::commit();
+            return $totalAffected;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Delete old datasets that weren't updated recently
+     * Useful for cleaning up stale data
+     * 
+     * @param int $daysOld Delete datasets older than X days
+     * @return int Number of deleted rows
+     */
+    public function deleteOlderThan(int $daysOld = 180): int
+    {
+        return DB::table('osdr_items')
+            ->where('updated_at', '<', now()->subDays($daysOld))
+            ->delete();
+    }
 }
