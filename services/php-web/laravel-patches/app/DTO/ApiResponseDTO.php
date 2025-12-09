@@ -4,20 +4,20 @@ namespace App\DTO;
 class ApiResponseDTO
 {
     public function __construct(
-        public readonly bool $success,
+        public readonly bool $ok,
         public readonly mixed $data = null,
         public readonly ?array $error = null
     ) {}
 
     public static function success(mixed $data): self
     {
-        return new self(success: true, data: $data);
+        return new self(ok: true, data: $data);
     }
 
     public static function error(string $code, string $message, ?string $traceId = null): self
     {
         return new self(
-            success: false,
+            ok: false,
             error: [
                 'code' => $code,
                 'message' => $message,
@@ -28,9 +28,9 @@ class ApiResponseDTO
 
     public function toArray(): array
     {
-        $result = ['success' => $this->success];
+        $result = ['ok' => $this->ok];
 
-        if ($this->success) {
+        if ($this->ok) {
             $result['data'] = $this->data instanceof \JsonSerializable
                 ? $this->data->jsonSerialize()
                 : $this->data;

@@ -66,8 +66,8 @@
                     <i class="bi bi-graph-up"></i> Position History (Last 100 records)
                 </h5>
             </div>
-            <div class="card-body">
-                <canvas id="historyChart" height="80"></canvas>
+            <div class="card-body" style="position: relative; height: 400px;">
+                <canvas id="historyChart"></canvas>
             </div>
         </div>
     </div>
@@ -146,10 +146,31 @@ document.addEventListener('DOMContentLoaded', function() {
 // Обновление позиции
 async function refreshPosition() {
     try {
-        const response = await fetch('{{ route('iss.api.fetch') }}');
+        const response = await fetch('{{ route('iss.api.fetch') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                'Accept': 'application/json'
+            }
+        });
+        
+        // Проверка Content-Type
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('Received non-JSON response:', text.substring(0, 200));
+            throw new Error('Server returned HTML instead of JSON. Check server logs.');
+        }
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         const data = await response.json();
         
-        if (data.success) {
+        // Используем "ok" вместо "success" (унифицированный формат)
+        if (data.ok === true && data.data) {
             const pos = data.data;
             document.getElementById('lat').textContent = pos.latitude.toFixed(4) + '°';
             document.getElementById('lon').textContent = pos.longitude.toFixed(4) + '°';
@@ -163,13 +184,15 @@ async function refreshPosition() {
             
             alert('Position updated successfully!');
             setTimeout(() => location.reload(), 1000);
-        } else {
-            const errorMsg = (typeof data.error === 'object' && data.error.message) 
-                ? data.error.message 
-                : (data.error || 'Unknown error');
+        } else if (data.ok === false && data.error) {
+            // Обработка унифицированного формата ошибок
+            const errorMsg = data.error.message || data.error.code || 'Unknown error';
             alert('Error: ' + errorMsg);
+        } else {
+            alert('Unexpected response format');
         }
     } catch (error) {
+        console.error('Fetch error:', error);
         alert('Failed to fetch position: ' + error.message);
     }
 }
@@ -188,26 +211,113 @@ function renderHistoryChart() {
                     label: 'Latitude',
                     data: history.map(h => h.latitude),
                     borderColor: 'rgb(75, 192, 192)',
-                    tension: 0.1
+                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.1,
+                    fill: false,
+                    pointRadius: 2,
+                    pointHoverRadius: 4
                 },
                 {
                     label: 'Longitude',
                     data: history.map(h => h.longitude),
                     borderColor: 'rgb(255, 99, 132)',
-                    tension: 0.1
+                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.1,
+                    fill: false,
+                    pointRadius: 2,
+                    pointHoverRadius: 4
                 }
             ]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'nearest',
+                axis: 'x',
+                intersect: false
+            },
             plugins: {
-                legend: { position: 'top' }
+                legend: { 
+                    position: 'top',
+                    labels: {
+                        color: '#fff',
+                        font: { size: 12 },
+                        usePointStyle: true,
+                        padding: 15
+                    },
+                    onClick: function(e, legendItem, legend) {
+                        const index = legendItem.datasetIndex;
+                        const chart = legend.chart;
+                        const meta = chart.getDatasetMeta(index);
+
+                        meta.hidden = meta.hidden === null ? !chart.data.datasets[index].hidden : null;
+                        chart.update();
+                    }
+                },
+                tooltip: {
+                    enabled: true,
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
+                    borderColor: 'rgba(255, 255, 255, 0.3)',
+                    borderWidth: 1
+                }
             },
             scales: {
+                x: {
+                    ticks: { 
+                        color: '#fff',
+                        maxRotation: 45,
+                        minRotation: 45
+                    },
+                    grid: { 
+                        color: 'rgba(255, 255, 255, 0.1)',
+                        drawOnChartArea: true
+                    }
+                },
                 y: {
-                    beginAtZero: false
+                    beginAtZero: false,
+                    ticks: { 
+                        color: '#fff',
+                        callback: function(value) {
+                            return value.toFixed(2) + '°';
+                        }
+                    },
+                    grid: { 
+                        color: 'rgba(255, 255, 255, 0.1)',
+                        drawOnChartArea: true
+                    }
                 }
-            }
+            },
+            animation: {
+                duration: 750,
+                easing: 'easeInOutQuart',
+                onComplete: null,
+                onProgress: null
+            },
+            transitions: {
+                show: {
+                    animations: {
+                        x: { from: 0 },
+                        y: { from: 0 }
+                    }
+                },
+                hide: {
+                    animations: {
+                        x: { to: 0 },
+                        y: { to: 0 }
+                    }
+                }
+            },
+            hover: {
+                animationDuration: 0
+            },
+            responsiveAnimationDuration: 0
         }
     });
 }

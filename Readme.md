@@ -568,6 +568,7 @@ advisory_locks_acquired{lock_id="1002"} 26  # OSDR scheduler
 
 ![alt text](image-4.png)
 ![alt text](image-5.png)
+![alt text](image-6.png)
 
 **Доступ:** http://localhost:8080dvisory Locks
 advisory_locks_acquired{lock_id="1001"} 52  # ISS scheduler
