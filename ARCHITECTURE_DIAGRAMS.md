@@ -1,73 +1,107 @@
-# Диаграммы архитектуры ISS Tracker
+# 📊 Диаграммы архитектуры ISS Tracker
 
-## 1. Общая архитектура системы (C4 Level 1 - Context)
+## 1. 🌐 Общая архитектура системы (C4 Level 1 - Context)
 
 ```mermaid
+%%{init: {'theme':'dark', 'themeVariables': { 'fontSize':'16px'}, 'flowchart': {'nodeSpacing': 60, 'rankSpacing': 100, 'curve': 'basis'}}}%%
 graph TB
-    User[ Пользователь<br/>Browser]
-    Admin[ Администратор<br/>Grafana]
+    User[" Пользователь<br/><b>Веб-браузер</b><br/><i>Просмотр данных МКС</i>"]
+    Admin[" Администратор<br/><b>Grafana UI</b><br/><i>Мониторинг системы</i>"]
     
-    subgraph "ISS Tracker System"
-        Nginx[ Nginx<br/>Reverse Proxy<br/>:8080]
-        Laravel[ PHP/Laravel<br/>Web Dashboard<br/>:9000]
-        Rust[ Rust Microservice<br/>API + Schedulers<br/>:3000]
-        Pascal[ Pascal Legacy<br/>CSV Generator<br/>cron every 5min]
-        DB[( PostgreSQL<br/>:5432)]
-        Redis[( Redis<br/>Cache<br/>:6379)]
-        Prometheus[ Prometheus<br/>Metrics<br/>:9090]
-        Grafana[ Grafana<br/>Dashboards<br/>:3001]
+    subgraph System["<b> Система ISS Tracker</b>"]
+        Nginx[" Nginx<br/><b>Reverse Proxy</b><br/>Порт: 8080<br/><i>Маршрутизация запросов</i>"]
+        Laravel[" PHP/Laravel<br/><b>Веб-интерфейс</b><br/>Порт: 9000<br/><i>Панели управления</i>"]
+        Rust[" Rust Microservice<br/><b>API + Планировщики</b><br/>Порт: 3000<br/><i>Бизнес-логика</i>"]
+        Pascal[" Pascal Legacy<br/><b>Генератор CSV</b><br/>Cron: каждые 5 мин<br/><i>Устаревший модуль</i>"]
+        DB[(" PostgreSQL<br/><b>Основная БД</b><br/>Порт: 5432<br/><i>Хранилище данных</i>")]
+        Redis[(" Redis<br/><b>Кеш-слой</b><br/>Порт: 6379<br/><i>5-300 сек TTL</i>")]
+        Prometheus[" Prometheus<br/><b>Сбор метрик</b><br/>Порт: 9090<br/><i>Time-series DB</i>"]
+        Grafana[" Grafana<br/><b>Визуализация</b><br/>Порт: 3001<br/><i>Дашборды</i>"]
     end
     
-    ExtISS[ wheretheiss.at API]
-    ExtNASA[ NASA API<br/>APOD, NEO, DONKI]
-    ExtOSDR[ NASA OSDR API]
-    ExtJWST[ JWST API]
-    ExtSpaceX[ SpaceX API]
-    ExtAstro[ AstronomyAPI]
+    ExtISS[" wheretheiss.at<br/><b>Open Notify API</b><br/><i>Позиция МКС</i>"]
+    ExtNASA[" NASA API<br/><b>APOD, NEO, DONKI</b><br/><i>Астрономия</i>"]
+    ExtOSDR[" NASA OSDR<br/><b>Open Science Data</b><br/><i>Научные наборы</i>"]
+    ExtJWST[" JWST API<br/><b>Webb Telescope</b><br/><i>Изображения космоса</i>"]
+    ExtSpaceX[" SpaceX API<br/><b>Launch Library</b><br/><i>Запуски ракет</i>"]
+    ExtAstro[" AstronomyAPI<br/><b>События</b><br/><i>Астрономические явления</i>"]
     
-    User -->|HTTP :8080| Nginx
-    Nginx -->|php-fpm| Laravel
-    Laravel -->|HTTP :3000| Rust
-    Rust -->|SQL| DB
-    Rust -->|Cache| Redis
-    Pascal -->|SQL INSERT| DB
+    User -->|"HTTP<br/>:8080"| Nginx
+    Nginx -->|"php-fpm<br/>FastCGI"| Laravel
+    Laravel -->|"HTTP/JSON<br/>:3000"| Rust
+    Rust -->|"SQL<br/>SELECT/INSERT"| DB
+    Rust -->|"Cache<br/>GET/SET"| Redis
+    Pascal -->|"SQL<br/>BULK INSERT"| DB
     
-    Rust -->|Fetch ISS Position| ExtISS
-    Rust -->|Fetch APOD/NEO/DONKI| ExtNASA
-    Rust -->|Fetch Datasets| ExtOSDR
-    Rust -->|Fetch Images| ExtJWST
-    Rust -->|Fetch Launches| ExtSpaceX
-    Laravel -->|Events| ExtAstro
+    Rust -->|"GET<br/>Позиция"| ExtISS
+    Rust -->|"GET<br/>Астрономия"| ExtNASA
+    Rust -->|"GET<br/>Наборы данных"| ExtOSDR
+    Rust -->|"GET<br/>Снимки"| ExtJWST
+    Rust -->|"GET<br/>Запуски"| ExtSpaceX
+    Laravel -->|"GET<br/>События"| ExtAstro
     
-    Rust -->|Expose /metrics| Prometheus
-    Admin -->|View Dashboards| Grafana
-    Grafana -->|Query| Prometheus
+    Rust -->|"Expose<br/>/metrics"| Prometheus
+    Admin -->|"HTTP<br/>:3001"| Grafana
+    Grafana -->|"PromQL<br/>Query"| Prometheus
     
-    style Nginx fill:#90EE90
-    style Laravel fill:#FF6B6B
-    style Rust fill:#FFA07A
-    style Pascal fill:#87CEEB
-    style DB fill:#4682B4
-    style Redis fill:#DC143C
+    style System fill:#1a1a2e,stroke:#16213e,stroke-width:4px,color:#fff
+    
+    style Nginx fill:#2d5016,stroke:#4CAF50,stroke-width:3px,color:#fff
+    style Laravel fill:#5c1a1a,stroke:#F44336,stroke-width:3px,color:#fff
+    style Rust fill:#5c3d1a,stroke:#FF9800,stroke-width:3px,color:#fff
+    style Pascal fill:#1a3a5c,stroke:#2196F3,stroke-width:3px,color:#fff
+    style DB fill:#1a4d5c,stroke:#00BCD4,stroke-width:3px,color:#fff
+    style Redis fill:#5c1a2e,stroke:#E91E63,stroke-width:3px,color:#fff
+    style Prometheus fill:#4a1a5c,stroke:#9C27B0,stroke-width:3px,color:#fff
+    style Grafana fill:#5c3d1a,stroke:#FFC107,stroke-width:3px,color:#fff
+    
+    style User fill:#263238,stroke:#607D8B,stroke-width:2px,color:#fff
+    style Admin fill:#263238,stroke:#607D8B,stroke-width:2px,color:#fff
 ```
 
 ---
 
-## 2. Архитектура Rust сервиса (C4 Level 2 - Containers)
+## 2.  Архитектура Rust микросервиса (7-слойная архитектура)
 
 ```mermaid
+%%{init: {'theme':'dark', 'themeVariables': { 'fontSize':'15px'}, 'flowchart': {'nodeSpacing': 50, 'rankSpacing': 80}}}%%
 graph TB
-    subgraph "Rust Microservice (Axum + SQLx)"
-        Routes[ Routes Layer<br/>HTTP Routing]
-        Handlers[ Handlers Layer<br/>Thin controllers]
-        Services[ Services Layer<br/>Business Logic]
-        Clients[ Clients Layer<br/>External APIs]
-        Repo[ Repository Layer<br/>Data Access]
-        Domain[ Domain Layer<br/>Models, Errors, DTO]
-        Config[ Config Layer<br/>.env parsing]
-        Middleware[ Middleware<br/>Rate limit, Request ID]
-        Scheduler[ Scheduler<br/>Background jobs]
-        Metrics[ Metrics<br/>Prometheus exporter]
+    subgraph RustService["<b> Rust Microservice (Actix-web + SQLx + Tokio)</b>"]
+        direction TB
+        
+        subgraph Layer1["<b> Слой 1: Маршруты (Routes)</b>"]
+            Routes[" routes/mod.rs<br/><i>Определение эндпоинтов</i><br/>/iss, /nasa, /osdr, /jwst"]
+        end
+        
+        subgraph Layer2["<b> Слой 2: Обработчики (Handlers)</b>"]
+            Handlers[" HTTP Controllers<br/><i>Тонкие обработчики</i><br/>iss_handler, nasa_handler"]
+        end
+        
+        subgraph Layer3["<b⚙️ Слой 3: Бизнес-логика (Services)</b>"]
+            Services[" Business Logic<br/><i>Основная логика</i><br/>iss_service, osdr_service"]
+        end
+        
+        subgraph Layer4["<b> Слой 4: HTTP-клиенты (Clients)</b>"]
+            Clients[" External API Clients<br/><i>Внешние запросы</i><br/>reqwest HTTP client"]
+        end
+        
+        subgraph Layer5["<b> Слой 5: Репозитории (Repository)</b>"]
+            Repo[" Data Access Layer<br/><i>Работа с БД</i><br/>SQLx queries + Redis"]
+        end
+        
+        subgraph Layer6["<b> Слой 6: Доменная модель (Domain)</b>"]
+            Domain[" Models, Errors, DTOs<br/><i>Типы данных</i><br/>IssPosition, ApiError"]
+        end
+        
+        subgraph Layer7["<b> Слой 7: Конфигурация (Config)</b>"]
+            Config[" Configuration<br/><i>Настройки из .env</i><br/>Database URLs, API keys"]
+        end
+        
+        subgraph CrossCutting["<b> Кросс-функциональные компоненты</b>"]
+            Middleware[" Middleware<br/><i>Rate limiting<br/>Request ID<br/>CORS</i>"]
+            Scheduler[" Scheduler<br/><i>Фоновые задачи<br/>Tokio cron jobs</i>"]
+            Metrics[" Metrics<br/><i>Prometheus<br/>exporter</i>"]
+        end
     end
     
     Routes --> Middleware
@@ -76,94 +110,178 @@ graph TB
     Services --> Clients
     Services --> Repo
     Repo --> Domain
-    Config --> Services
-    Scheduler --> Services
-    Handlers --> Metrics
+    Config -.->|Инициализация| Services
+    Scheduler -.->|Вызов| Services
+    Handlers -.->|Экспорт| Metrics
     
-    Clients -.->|HTTP| ExtAPI[External APIs]
-    Repo -.->|SQL| PostgreSQL[(PostgreSQL)]
-    Repo -.->|Cache| RedisDB[(Redis)]
+    Clients -.->|"HTTP<br/>Внешние API"| ExtAPI[" External APIs<br/>wheretheiss.at<br/>NASA, SpaceX"]
+    Repo -.->|"SQL<br/>Запросы"| PostgreSQL[(" PostgreSQL<br/>Партиции<br/>Индексы")]
+    Repo -.->|"Cache<br/>GET/SET"| RedisDB[(" Redis<br/>5-300 сек<br/>TTL")]
     
-    style Routes fill:#FFE4B5
-    style Handlers fill:#FFD700
-    style Services fill:#FFA500
-    style Clients fill:#FF8C00
-    style Repo fill:#FF6347
-    style Domain fill:#DC143C
+    style RustService fill:#0d1117,stroke:#30363d,stroke-width:2px
+    
+    style Layer1 fill:#1a472a,stroke:#4CAF50,stroke-width:3px,color:#fff
+    style Layer2 fill:#1a3a5c,stroke:#2196F3,stroke-width:3px,color:#fff
+    style Layer3 fill:#5c3d1a,stroke:#FF9800,stroke-width:3px,color:#fff
+    style Layer4 fill:#4a1a5c,stroke:#9C27B0,stroke-width:3px,color:#fff
+    style Layer5 fill:#5c1a1a,stroke:#F44336,stroke-width:3px,color:#fff
+    style Layer6 fill:#3d2f1a,stroke:#795548,stroke-width:3px,color:#fff
+    style Layer7 fill:#2d3a42,stroke:#607D8B,stroke-width:3px,color:#fff
+    style CrossCutting fill:#1a2332,stroke:#455A64,stroke-width:3px,color:#fff
+    
+    style Routes fill:#4CAF50,stroke:#81C784,stroke-width:2px,color:#000
+    style Handlers fill:#2196F3,stroke:#64B5F6,stroke-width:2px,color:#fff
+    style Services fill:#FF9800,stroke:#FFB74D,stroke-width:2px,color:#000
+    style Clients fill:#9C27B0,stroke:#BA68C8,stroke-width:2px,color:#fff
+    style Repo fill:#F44336,stroke:#E57373,stroke-width:2px,color:#fff
+    style Domain fill:#795548,stroke:#A1887F,stroke-width:2px,color:#fff
+    style Config fill:#607D8B,stroke:#90A4AE,stroke-width:2px,color:#fff
 ```
 
 ---
 
-## 3. Слои Rust сервиса (детально)
-
-### 3.1 Routes → Handlers → Services
+## 3. 🔄 Поток обработки запроса (Sequence Diagram)
 
 ```mermaid
+%%{init: {'theme':'dark', 'themeVariables': { 'fontSize':'15px', 'actorBkg':'#2d3748', 'actorBorder':'#4a5568', 'actorTextColor':'#fff', 'signalColor':'#63b3ed', 'signalTextColor':'#fff', 'labelBoxBkgColor':'#2d3748', 'labelBoxBorderColor':'#4a5568', 'labelTextColor':'#fff', 'noteBkgColor':'#4299e1', 'noteTextColor':'#fff'}}}%%
 sequenceDiagram
-    participant Client
-    participant Routes
-    participant Middleware
-    participant Handler
-    participant Service
-    participant Repository
-    participant DB
+    participant Client as  Клиент<br/>Браузер
+    participant Routes as  Routes<br/>mod.rs
+    participant MW as  Middleware<br/>Rate limit
+    participant Handler as  Handler<br/>iss_handler
+    participant Service as  Service<br/>iss_service
+    participant Repo as  Repository<br/>iss_repo
+    participant DB as  PostgreSQL
     
     Client->>Routes: GET /iss/current
-    Routes->>Middleware: request_id_middleware
-    Middleware->>Middleware: Generate trace_id
-    Middleware->>Middleware: rate_limit_check
-    Middleware->>Handler: get_current_position()
+    activate Routes
+    Routes->>MW: request_id_middleware
+    activate MW
+    MW->>MW:  Generate trace_id<br/>(UUID v4)
+    MW->>MW:  rate_limit_check<br/>(100 req/min)
+    MW->>Handler: get_current_position()
+    deactivate MW
+    activate Handler
+    
     Handler->>Service: iss_service.get_current_position()
-    Service->>Repository: iss_repo.get_latest()
-    Repository->>DB: SELECT * FROM iss_fetch_log ORDER BY fetched_at DESC LIMIT 1
-    DB-->>Repository: IssPosition row
-    Repository-->>Service: IssPosition
+    activate Service
+    
+    Service->>Repo: iss_repo.get_latest()
+    activate Repo
+    
+    Repo->>DB: SELECT * FROM iss_fetch_log<br/>ORDER BY fetched_at DESC<br/>LIMIT 1
+    activate DB
+    DB-->>Repo:  IssPosition row<br/>{lat: 45.2, lon: -122.3}
+    deactivate DB
+    
+    Repo-->>Service: IssPosition struct
+    deactivate Repo
+    
     Service-->>Handler: IssPosition
-    Handler->>Handler: Wrap in ApiResponse{ok:true, data}
-    Handler-->>Middleware: Json<ApiResponse<IssPosition>>
-    Middleware-->>Routes: HTTP 200 + trace_id header
-    Routes-->>Client: JSON response
+    deactivate Service
+    
+    Handler->>Handler:  Wrap in ApiResponse<br/>{ok:true, data: IssPosition}
+    Handler-->>Routes: Json<ApiResponse<IssPosition>>
+    deactivate Handler
+    
+    Routes-->>Client:  HTTP 200<br/>X-Trace-ID: abc123<br/>Content-Type: application/json
+    deactivate Routes
+    
+    Note over Client,DB:  Общее время: ~5-20ms<br/> Redis cache miss = DB query<br/> Redis cache hit = ~1ms
 ```
 
 ---
 
-## 4. Фоновый планировщик (Scheduler)
+## 4.  Фоновый планировщик (Scheduler Architecture)
 
 ```mermaid
-graph LR
-    subgraph "Schedulers (Tokio Tasks)"
-        ISS[ISS Position<br/>every 120s]
-        OSDR[OSDR Sync<br/>every 7200s]
-        APOD[APOD Fetch<br/>every 43200s]
-        NEO[NEO Fetch<br/>every 7200s]
-        DONKI[DONKI Fetch<br/>every 3600s]
-        SpaceX[SpaceX Fetch<br/>every 3600s]
+%%{init: {'theme':'dark', 'themeVariables': { 'fontSize':'15px'}, 'flowchart': {'nodeSpacing': 60, 'rankSpacing': 100}}}%%
+graph TB
+    subgraph Schedulers["<b> Планировщики задач (Tokio Async Tasks)</b>"]
+        direction TB
+        ISS[" ISS Position<br/><b>Каждые 120 сек</b><br/><i>Отслеживание позиции МКС</i>"]
+        OSDR[" OSDR Sync<br/><b>Каждые 7200 сек (2ч)</b><br/><i>Синхронизация наборов</i>"]
+        APOD[" APOD Fetch<br/><b>Каждые 43200 сек (12ч)</b><br/><i>Фото дня от NASA</i>"]
+        NEO[" NEO Fetch<br/><b>Каждые 7200 сек (2ч)</b><br/><i>Астероиды рядом с Землёй</i>"]
+        DONKI[" DONKI Fetch<br/><b>Каждые 3600 сек (1ч)</b><br/><i>События космической погоды</i>"]
+        SpaceX[" SpaceX Fetch<br/><b>Каждые 3600 сек (1ч)</b><br/><i>Ближайшие запуски</i>"]
     end
     
-    ISS -->|Advisory Lock| IssService
-    OSDR -->|Advisory Lock| OsdrService
-    APOD -->|Advisory Lock| NasaService
-    NEO -->|Advisory Lock| NasaService
-    DONKI -->|Advisory Lock| NasaService
-    SpaceX -->|Advisory Lock| SpaceXService
+    subgraph Services["<b> Сервисный слой</b>"]
+        direction TB
+        IssService["IssService<br/><i>Логика МКС</i>"]
+        OsdrService["OsdrService<br/><i>Логика OSDR</i>"]
+        NasaService["NasaService<br/><i>Логика NASA</i>"]
+        SpaceXService["SpaceXService<br/><i>Логика SpaceX</i>"]
+    end
     
-    IssService -->|HTTP| WhereISS[wheretheiss.at API]
-    OsdrService -->|HTTP| OSDRAPI[NASA OSDR API]
-    NasaService -->|HTTP| NASAAPI[NASA API]
-    SpaceXService -->|HTTP| SpaceXAPI[SpaceX API]
+    subgraph ExternalAPIs["<b> Внешние API</b>"]
+        direction TB
+        WhereISS["wheretheiss.at API<br/><i>Real-time ISS location</i>"]
+        OSDRAPI["NASA OSDR API<br/><i>Science datasets</i>"]
+        NASAAPI["NASA API<br/><i>APOD, NEO, DONKI</i>"]
+        SpaceXAPI["SpaceX API<br/><i>Launch schedule</i>"]
+    end
     
-    IssService -->|INSERT/UPSERT| DB[(PostgreSQL)]
-    OsdrService -->|BATCH INSERT| DB
-    NasaService -->|INSERT| DB
-    SpaceXService -->|INSERT| DB
+    DB[(" PostgreSQL<br/><b>Основная БД</b><br/><i>Партиции по времени</i>")]
     
-    style ISS fill:#90EE90
-    style OSDR fill:#87CEEB
-    style APOD fill:#FFD700
-    style NEO fill:#FFA07A
-    style DONKI fill:#FF6B6B
-    style SpaceX fill:#9370DB
-```
+    ISS -->|" Advisory Lock<br/>pg_try_advisory_lock"| IssService
+    OSDR -->|" Advisory Lock"| OsdrService
+    APOD -->|" Advisory Lock"| NasaService
+    NEO -->|" Advisory Lock"| NasaService
+    DONKI -->|" Advisory Lock"| NasaService
+---
+
+## 5.  Единый формат обработки ошибок
+
+```mermaid
+%%{init: {'theme':'dark', 'themeVariables': { 'fontSize':'15px'}, 'flowchart': {'nodeSpacing': 50, 'rankSpacing': 80}}}%%
+graph TD
+    Request[" HTTP Request<br/><i>Входящий запрос</i>"] --> Handler["🎯 Handler<br/><i>Обработчик</i>"]
+    Handler --> Service[" Service<br/><i>Бизнес-логика</i>"]
+    Service --> Error{" Error?<br/><i>Ошибка возникла?</i>"}
+    
+    Error -->|" Нет"| Success[" Success Data<br/><i>Успешные данные</i>"]
+    Error -->|" Да"| ApiError[" ApiError enum<br/><i>Тип ошибки</i>"]
+    
+    ApiError --> InternalError[" InternalError<br/><b>500</b><br/><i>Внутренняя ошибка</i><br/>DB failure, Panic"]
+    ApiError --> UpstreamError[" UpstreamError<br/><b>503</b><br/><i>Внешний API недоступен</i><br/>NASA API timeout"]
+    ApiError --> NotFound[" NotFound<br/><b>404</b><br/><i>Ресурс не найден</i><br/>Dataset not exists"]
+    ApiError --> ValidationError["✓ ValidationError<br/><b>400</b><br/><i>Неверные данные</i><br/>Invalid date format"]
+    
+    InternalError --> Format[" ApiResponse::error()<br/><i>Унифицированный формат</i>"]
+    UpstreamError --> Format
+    NotFound --> Format
+    ValidationError --> Format
+    
+    Success --> SuccessFormat[" ApiResponse::success()<br/><i>Формат успеха</i>"]
+    
+    Format --> ErrorResponse[" Error Response<br/><b>HTTP 200</b><br/><code>{<br/>  ok: false,<br/>  error: {<br/>    code: 'UPSTREAM_503',<br/>    message: 'NASA API unavailable',<br/>    trace_id: 'abc123-def456'<br/>  }<br/>}</code>"]
+    
+    SuccessFormat --> SuccessResponse[" Success Response<br/><b>HTTP 200</b><br/><code>{<br/>  ok: true,<br/>  data: {<br/>    latitude: 45.2,<br/>    longitude: -122.3<br/>  }<br/>}</code>"]
+    
+    ErrorResponse --> Client[" Client<br/><i>Клиент получает ответ</i>"]
+    SuccessResponse --> Client
+    
+    style Request fill:#1a3a5c,stroke:#2196F3,stroke-width:2px,color:#fff
+    style Handler fill:#2196F3,stroke:#64B5F6,stroke-width:2px,color:#fff
+    style Service fill:#FF9800,stroke:#FFB74D,stroke-width:2px,color:#000
+    style Error fill:#5c4d1a,stroke:#FFC107,stroke-width:3px,color:#000
+    style ApiError fill:#5c1a1a,stroke:#F44336,stroke-width:3px,color:#fff
+    
+    style InternalError fill:#5c1a1a,stroke:#F44336,stroke-width:2px,color:#fff
+    style UpstreamError fill:#5c3d1a,stroke:#FF5722,stroke-width:2px,color:#fff
+    style NotFound fill:#5c4d1a,stroke:#FF9800,stroke-width:2px,color:#000
+    style ValidationError fill:#5c5c1a,stroke:#FFC107,stroke-width:2px,color:#000
+    
+    style Format fill:#3d2f1a,stroke:#795548,stroke-width:2px,color:#fff
+    style SuccessFormat fill:#2d5016,stroke:#4CAF50,stroke-width:2px,color:#fff
+    
+    style ErrorResponse fill:#5c1a1a,stroke:#F44336,stroke-width:3px,color:#fff
+    style SuccessResponse fill:#2d5016,stroke:#4CAF50,stroke-width:3px,color:#fff
+    style Success fill:#2d5016,stroke:#4CAF50,stroke-width:2px,color:#fff
+    
+    style Client fill:#2d3a42,stroke:#607D8B,stroke-width:2px,color:#fff
 
 ---
 
@@ -203,41 +321,77 @@ graph TD
 
 ---
 
-## 6. Laravel архитектура (Service + Repository)
+## 6. 🐘 Архитектура Laravel (Service + Repository Pattern)
 
 ```mermaid
+%%{init: {'theme':'dark', 'themeVariables': { 'fontSize':'15px'}, 'flowchart': {'nodeSpacing': 50, 'rankSpacing': 80}}}%%
 graph TB
-    subgraph "Laravel (PHP 8.3)"
-        Routes[ Routes<br/>web.php]
-        Controllers[ Controllers<br/>Thin layer]
-        Services[ Services<br/>Business logic]
-        Repositories[ Repositories<br/>Data access]
-        DTO[ DTO<br/>Data Transfer Objects]
-        Requests[ Form Requests<br/>Validation]
-        Middleware[ Middleware<br/>CSRF, Auth]
-        Views[ Blade Views<br/>Templates]
+    Browser[" Браузер<br/><i>HTTP запросы</i>"]
+    Nginx[" Nginx<br/><i>:8080</i>"]
+    
+    subgraph LaravelApp["<b>🐘 Laravel Application (PHP 8.3)</b>"]
+        direction TB
+        
+        subgraph PresentationLayer["<b> Слой представления</b>"]
+            Routes[" Routes<br/><i>web.php</i><br/>/dashboard, /iss, /osdr"]
+            Middleware[" Middleware<br/><i>CSRF, Session, Auth</i>"]
+            Controllers[" Controllers<br/><i>Тонкий слой</i><br/>DashboardController"]
+            Views[" Blade Views<br/><i>Шаблоны UI</i><br/>dashboard.blade.php"]
+        end
+        
+        subgraph BusinessLayer["<b> Слой бизнес-логики</b>"]
+            Services[" Services<br/><i>Основная логика</i><br/>IssService, OsdrService"]
+            Requests[" Form Requests<br/><i>Валидация данных</i><br/>StoreRequest"]
+        end
+        
+        subgraph DataLayer["<b> Слой данных</b>"]
+            Repositories[" Repositories<br/><i>Доступ к БД</i><br/>IssRepository"]
+            DTO[" DTO<br/><i>Объекты передачи</i><br/>IssPositionDTO"]
+        end
     end
     
-    Browser[Browser] -->|HTTP| Nginx
-    Nginx -->|php-fpm| Routes
+    DB[(" PostgreSQL<br/><b>Основная БД</b><br/><i>SQLx queries</i>")]
+    RustAPI[" Rust API<br/><b>:3000</b><br/><i>/iss/last, /osdr/datasets</i>"]
+    ExtAPI[" External APIs<br/><b>AstronomyAPI</b><br/><i>Астрономические события</i>"]
+    
+    Browser -->|"HTTP<br/>Request"| Nginx
+    Nginx -->|"php-fpm<br/>FastCGI"| Routes
     Routes --> Middleware
     Middleware --> Controllers
     Controllers --> Requests
-    Requests -->|Validated| Controllers
+    Requests -->|" Валидировано"| Controllers
     Controllers --> Services
-    Services --> Repositories
-    Services --> RustAPI[Rust API<br/>:3000]
-    Services --> ExtAPI[External APIs]
-    Repositories --> DB[(PostgreSQL)]
     Controllers --> Views
-    DTO -.-> Controllers
-    DTO -.-> Views
     
-    Views --> Browser
+    Services --> Repositories
+    Services -->|"HTTP/JSON"| RustAPI
+    Services -->|"HTTP/JSON"| ExtAPI
+    Repositories -->|"SQL<br/>SELECT/INSERT"| DB
     
-    style Services fill:#FF6B6B
-    style Repositories fill:#4682B4
-    style DTO fill:#FFD700
+    DTO -.->|"Передача<br/>данных"| Controllers
+    DTO -.->|"Передача<br/>данных"| Views
+    
+    Views -->|"HTML<br/>Response"| Browser
+    
+    style LaravelApp fill:#0d1117,stroke:#30363d,stroke-width:2px
+    style PresentationLayer fill:#1a3a5c,stroke:#2196F3,stroke-width:3px,color:#fff
+    style BusinessLayer fill:#5c3d1a,stroke:#FF9800,stroke-width:3px,color:#fff
+    style DataLayer fill:#5c1a1a,stroke:#F44336,stroke-width:3px,color:#fff
+    
+    style Routes fill:#2196F3,stroke:#64B5F6,stroke-width:2px,color:#fff
+    style Middleware fill:#607D8B,stroke:#90A4AE,stroke-width:2px,color:#fff
+    style Controllers fill:#2196F3,stroke:#64B5F6,stroke-width:2px,color:#fff
+    style Views fill:#9C27B0,stroke:#BA68C8,stroke-width:2px,color:#fff
+    
+    style Services fill:#FF9800,stroke:#FFB74D,stroke-width:2px,color:#000
+    style Requests fill:#FFC107,stroke:#FFD54F,stroke-width:2px,color:#000
+    
+    style Repositories fill:#F44336,stroke:#E57373,stroke-width:2px,color:#fff
+    style DTO fill:#FFC107,stroke:#FFD54F,stroke-width:2px,color:#000
+    
+    style DB fill:#1a4d5c,stroke:#00BCD4,stroke-width:3px,color:#fff
+    style RustAPI fill:#5c3d1a,stroke:#FF9800,stroke-width:3px,color:#fff
+    style ExtAPI fill:#4a1a5c,stroke:#9C27B0,stroke-width:3px,color:#fff
 ```
 
 ---
