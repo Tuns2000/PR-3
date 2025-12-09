@@ -594,18 +594,18 @@ advisory_locks_acquired{lock_id="1002"} 26  # OSDR scheduler
 
 ---
 
-## 🔗 ССЫЛКИ НА РЕШЕНИЯ В GIT
+##  ССЫЛКИ НА РЕШЕНИЯ В GIT
 
-1. **Архитектура Rust:** `services/rust-iss/src/` (routes, handlers, services, repo, domain)
-2. **Единый формат ошибок:** `services/rust-iss/src/domain/error.rs` (ApiResponse, ErrorInfo)
-3. **Batch processing:** `services/rust-iss/src/repo/osdr_repo.rs` (batch_upsert with UNNEST)
-4. **Materialized views:** `db/migrations/002_materialized_views.sql` (6 views)
-5. **Repository Pattern:** `services/php-web/laravel-patches/app/Repositories/` (IssRepository, OsdrRepository)
-6. **Service Layer:** `services/php-web/laravel-patches/app/Services/` (IssService, OsdrService)
-7. **Security Audit:** `SECURITY_AUDIT.md` (7 уязвимостей устранено)
-8. **Тесты:** `run_all_tests.ps1`, `TESTING_DOCUMENTATION.md`, `PHASE_8_TEST_RESULTS.md`
-9. **Мониторинг:** `PHASE_10_MONITORING.md`, `PHASE_10_VERIFICATION.md`
-10. **Connection Pooling:** `CONNECTION_POOLING.md`
+1. **Архитектура Rust:** [services/rust-iss/src/](services/rust-iss/src/) (routes, handlers, services, repo, domain)
+2. **Единый формат ошибок:** [services/rust-iss/src/domain/error.rs](services/rust-iss/src/domain/error.rs) (ApiResponse, ErrorInfo)
+3. **Batch processing:** [services/rust-iss/src/repo/osdr_repo.rs](services/rust-iss/src/repo/osdr_repo.rs) (batch_upsert with UNNEST)
+4. **Materialized views:** [db/migrations/002_materialized_views.sql](db/migrations/002_materialized_views.sql) (6 views)
+5. **Repository Pattern:** [services/php-web/laravel-patches/app/Repositories/](services/php-web/laravel-patches/app/Repositories/) (IssRepository, OsdrRepository)
+6. **Service Layer:** [services/php-web/laravel-patches/app/Services/](services/php-web/laravel-patches/app/Services/) (IssService, OsdrService)
+7. **Security Audit:** [SECURITY_AUDIT.md](SECURITY_AUDIT.md) (7 уязвимостей устранено)
+8. **Тесты:** [run_all_tests.ps1](run_all_tests.ps1), [TESTING_DOCUMENTATION.md](TESTING_DOCUMENTATION.md), [PHASE_8_TEST_RESULTS.md](PHASE_8_TEST_RESULTS.md)
+9. **Мониторинг:** [PHASE_10_MONITORING.md](PHASE_10_MONITORING.md), [PHASE_10_VERIFICATION.md](PHASE_10_VERIFICATION.md)
+10. **Connection Pooling:** [CONNECTION_POOLING.md](CONNECTION_POOLING.md)
 
 ---
 
