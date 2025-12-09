@@ -566,7 +566,7 @@ advisory_locks_acquired{lock_id="1002"} 26  # OSDR scheduler
 
 ### 6. ISS Tracker UI:
 
-![ISS Tracker Interface](./docs/screenshots/iss_tracker_ui.png)
+![alt text](image-4.png)
 
 **Доступ:** http://localhost:8080dvisory Locks
 advisory_locks_acquired{lock_id="1001"} 52  # ISS scheduler
