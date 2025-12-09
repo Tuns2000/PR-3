@@ -58,6 +58,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
     info!("Connected to PostgreSQL");
 
+    // Инициализация метрик DB pool (0 active, 10 idle initially)
+    utils::metrics::update_db_pool_metrics("main", 0, 10);
+
     // Инициализация таблиц
     init_database(&pg_pool).await?;
 

@@ -26,8 +26,14 @@ impl CacheRepo {
         let value: Option<String> = redis::cmd("GET").arg(key).query_async(&mut conn).await?;
 
         match value {
-            Some(json) => Ok(serde_json::from_str(&json).ok()),
-            None => Ok(None),
+            Some(json) => {
+                crate::utils::metrics::record_cache_hit(key);
+                Ok(serde_json::from_str(&json).ok())
+            },
+            None => {
+                crate::utils::metrics::record_cache_miss(key);
+                Ok(None)
+            },
         }
     }
 

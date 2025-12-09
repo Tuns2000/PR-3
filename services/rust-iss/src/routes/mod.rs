@@ -7,7 +7,7 @@ use crate::{
         get_images, SharedJwstService,
         get_next_launch, SharedSpaceXService,
     },
-    middleware::{rate_limit_middleware, request_id_middleware, SharedRateLimiter},
+    middleware::{metrics_middleware, rate_limit_middleware, request_id_middleware, SharedRateLimiter},
 };
 use axum::{
     middleware,
@@ -91,6 +91,7 @@ pub fn create_router(state: AppState) -> Router {
         // Middleware
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::permissive())
+        .layer(middleware::from_fn(metrics_middleware))
         .layer(middleware::from_fn(request_id_middleware))
         .layer(middleware::from_fn_with_state(
             state.rate_limiter.clone(),
