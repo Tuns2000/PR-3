@@ -275,35 +275,6 @@ wrk -t4 -c100 -d10s --latency http://localhost:8080/health
    Проверка: главная страница (/) возвращает HTTP 200
 ```
 
-### 4.2 Созданные тесты (115+ тестов - готовы к активации)
-
-**Rust Unit Tests (22 теста)** — созданы, требуют установки Rust
-- Domain models тесты
-- Service layer тесты
-- Error handling тесты
-
-**Rust Integration Tests (20 тестов)** — созданы, требуют Rust + запущенный сервис
-- API endpoints тесты
-- Middleware тесты
-- Database тесты
-
-**Laravel Feature Tests (31 тест)** — созданы, отключены до настройки CSRF
-- IssControllerTest (10 тестов)
-- OsdrControllerTest (8 тестов)
-- ProxyControllerTest (6 тестов)
-- LegacyControllerTest (7 тестов)
-
-**Security Tests (25 тестов)** — созданы, отключены до настройки middleware
-- CSRF Protection (5 тестов)
-- XSS Prevention (10 тестов)
-- Input Validation (10 тестов)
-
-**Performance Tests (17 тестов)** — созданы, требуют инструмент `wrk`
-- Load testing (10 тестов)
-- Database performance (5 тестов)
-- Cache effectiveness (2 теста)
-
----
 
 ## 5. Как запускать тесты
 
