@@ -40,8 +40,8 @@ pub struct OsdrDataset {
     pub dataset_id: String,
     pub title: String,
     pub description: Option<String>,
-    pub release_date: Option<NaiveDateTime>,
-    pub updated_at: NaiveDateTime,
+    pub release_date: Option<chrono::NaiveDate>,
+    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Deserialize)]

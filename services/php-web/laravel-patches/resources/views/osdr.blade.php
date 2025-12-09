@@ -77,16 +77,32 @@ async function syncDatasets() {
     statusEl.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Syncing...';
     
     try {
-        const response = await fetch('{{ route('osdr.api.sync') }}');
+        const response = await fetch('{{ route('osdr.api.sync') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                'Accept': 'application/json'
+            }
+        });
+        
+        // Проверка Content-Type перед парсингом JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Server returned HTML instead of JSON. Check Laravel logs.');
+        }
+        
         const data = await response.json();
         
-        if (data.success) {
+        if (data.ok === true && data.data) {
             statusEl.innerHTML = '<span class="text-success">✓ Synced successfully!</span>';
             setTimeout(() => location.reload(), 1500);
         } else {
             const errorMsg = (typeof data.error === 'object' && data.error.message) 
                 ? data.error.message 
-                : (data.error || 'Unknown error');
+                : (data.error?.code || 'Unknown error');
+            console.error('OSDR sync error:', data.error);
+            
             // Показать пользователю что NASA API недоступен
             if (errorMsg.includes('OSDR API failed') || errorMsg.includes('JSON parse error')) {
                 statusEl.innerHTML = '<span class="text-warning">⚠ NASA OSDR API temporarily unavailable</span>';
@@ -95,6 +111,7 @@ async function syncDatasets() {
             }
         }
     } catch (error) {
+        console.error('OSDR sync exception:', error);
         statusEl.innerHTML = '<span class="text-danger">✗ Failed: ' + error.message + '</span>';
     }
 }

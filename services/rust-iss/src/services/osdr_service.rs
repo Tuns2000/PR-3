@@ -30,8 +30,7 @@ impl OsdrService {
         for api_dataset in api_response.results {
             let release_date = api_dataset
                 .release_date
-                .and_then(|s| chrono::NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok())
-                .map(|d| d.and_hms_opt(0, 0, 0).unwrap());
+                .and_then(|s| chrono::NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok());
 
             let dataset = OsdrDataset {
                 id: None,
@@ -39,7 +38,7 @@ impl OsdrService {
                 title: api_dataset.title,
                 description: api_dataset.description,
                 release_date,
-                updated_at: Utc::now().naive_utc(),
+                updated_at: Utc::now(),
             };
 
             self.osdr_repo.save(&dataset).await?;
@@ -80,8 +79,7 @@ impl OsdrService {
             let release_date = api_dataset
                 .release_date
                 .as_ref()
-                .and_then(|s| chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").ok())
-                .map(|d| d.and_hms_opt(0, 0, 0).unwrap());
+                .and_then(|s| chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").ok());
 
             let dataset = OsdrDataset {
                 id: None,
@@ -89,7 +87,7 @@ impl OsdrService {
                 title: api_dataset.title.clone(),
                 description: api_dataset.description.clone(),
                 release_date,
-                updated_at: Utc::now().naive_utc(),
+                updated_at: Utc::now(),
             };
 
             self.osdr_repo.save(&dataset).await?;

@@ -1,4 +1,5 @@
 use crate::domain::{error::ApiError, models::OsdrDataset};
+use chrono::{DateTime, Utc};
 use sqlx::{PgPool, Row};
 
 pub struct OsdrRepo {
@@ -137,15 +138,15 @@ impl OsdrRepo {
         let dataset_ids: Vec<String> = datasets.iter().map(|d| d.dataset_id.clone()).collect();
         let titles: Vec<String> = datasets.iter().map(|d| d.title.clone()).collect();
         let descriptions: Vec<Option<String>> = datasets.iter().map(|d| d.description.clone()).collect();
-        let release_dates: Vec<Option<chrono::NaiveDateTime>> = 
+        let release_dates: Vec<Option<chrono::NaiveDate>> = 
             datasets.iter().map(|d| d.release_date).collect();
-        let updated_ats: Vec<chrono::NaiveDateTime> = 
+        let updated_ats: Vec<DateTime<Utc>> = 
             datasets.iter().map(|d| d.updated_at).collect();
 
         let result = sqlx::query(
             r#"
             INSERT INTO osdr_items (dataset_id, title, description, release_date, updated_at)
-            SELECT * FROM UNNEST($1::text[], $2::text[], $3::text[], $4::timestamptz[], $5::timestamptz[])
+            SELECT * FROM UNNEST($1::text[], $2::text[], $3::text[], $4::date[], $5::timestamptz[])
             ON CONFLICT (dataset_id) DO UPDATE SET
                 title = EXCLUDED.title,
                 description = EXCLUDED.description,
