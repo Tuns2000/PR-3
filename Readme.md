@@ -238,7 +238,6 @@ return view('iss', [
 | **CSRF Protection** |  ЕСТЬ | `SECURITY_AUDIT.md`: "CSRF защита включена для web group, API исключены" |
 | **XSS Protection** |  ЕСТЬ | Blade auto-escaping `{{ }}`, валидация HTML тегов |
 | **Path Traversal** |  ЕСТЬ | `ProxyRequest`: regex `/^[a-zA-Z0-9\/_-]+$/` |
-| **N+1 Queries** |  НЕТ | `SECURITY_AUDIT.md`: "N+1 queries не обнаружено, Laravel Query Builder используется корректно" |
 
 **Пример валидации (IssHistoryRequest.php):**
 ```php
