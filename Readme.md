@@ -559,7 +559,7 @@ advisory_locks_acquired{lock_id="1002"} 26  # OSDR scheduler
 
 ### 5. Grafana Dashboard:
 
-![alt text](image-3.png)
+![alt text](image-8.png)
 
 **Доступ:** http://localhost:3001 (admin/admin)
 
