@@ -192,75 +192,101 @@ sequenceDiagram
 
 ---
 
-## 4.  Фоновый планировщик (Scheduler Architecture)
+## 4. Фоновый планировщик (Scheduler Architecture)
 
 ```mermaid
 %%{init: {'theme':'dark', 'themeVariables': { 'fontSize':'15px'}, 'flowchart': {'nodeSpacing': 60, 'rankSpacing': 100}}}%%
 graph TB
-    subgraph Schedulers["<b> Планировщики задач (Tokio Async Tasks)</b>"]
+    subgraph Schedulers["Планировщики задач - Tokio Async Tasks"]
         direction TB
-        ISS[" ISS Position<br/><b>Каждые 120 сек</b><br/><i>Отслеживание позиции МКС</i>"]
-        OSDR[" OSDR Sync<br/><b>Каждые 7200 сек (2ч)</b><br/><i>Синхронизация наборов</i>"]
-        APOD[" APOD Fetch<br/><b>Каждые 43200 сек (12ч)</b><br/><i>Фото дня от NASA</i>"]
-        NEO[" NEO Fetch<br/><b>Каждые 7200 сек (2ч)</b><br/><i>Астероиды рядом с Землёй</i>"]
-        DONKI[" DONKI Fetch<br/><b>Каждые 3600 сек (1ч)</b><br/><i>События космической погоды</i>"]
-        SpaceX[" SpaceX Fetch<br/><b>Каждые 3600 сек (1ч)</b><br/><i>Ближайшие запуски</i>"]
+        ISS["ISS Position<br/>Каждые 120 сек<br/>Отслеживание позиции МКС"]
+        OSDR["OSDR Sync<br/>Каждые 7200 сек - 2ч<br/>Синхронизация наборов"]
+        APOD["APOD Fetch<br/>Каждые 43200 сек - 12ч<br/>Фото дня от NASA"]
+        NEO["NEO Fetch<br/>Каждые 7200 сек - 2ч<br/>Астероиды рядом с Землёй"]
+        DONKI["DONKI Fetch<br/>Каждые 3600 сек - 1ч<br/>События космической погоды"]
+        SpaceX["SpaceX Fetch<br/>Каждые 3600 сек - 1ч<br/>Ближайшие запуски"]
     end
     
-    subgraph Services["<b> Сервисный слой</b>"]
+    subgraph Services["Сервисный слой"]
         direction TB
-        IssService["IssService<br/><i>Логика МКС</i>"]
-        OsdrService["OsdrService<br/><i>Логика OSDR</i>"]
-        NasaService["NasaService<br/><i>Логика NASA</i>"]
-        SpaceXService["SpaceXService<br/><i>Логика SpaceX</i>"]
+        IssService["IssService<br/>Логика МКС"]
+        OsdrService["OsdrService<br/>Логика OSDR"]
+        NasaService["NasaService<br/>Логика NASA"]
+        SpaceXService["SpaceXService<br/>Логика SpaceX"]
     end
     
-    subgraph ExternalAPIs["<b> Внешние API</b>"]
+    subgraph ExternalAPIs["Внешние API"]
         direction TB
-        WhereISS["wheretheiss.at API<br/><i>Real-time ISS location</i>"]
-        OSDRAPI["NASA OSDR API<br/><i>Science datasets</i>"]
-        NASAAPI["NASA API<br/><i>APOD, NEO, DONKI</i>"]
-        SpaceXAPI["SpaceX API<br/><i>Launch schedule</i>"]
+        WhereISS["wheretheiss.at API<br/>Real-time ISS location"]
+        OSDRAPI["NASA OSDR API<br/>Science datasets"]
+        NASAAPI["NASA API<br/>APOD, NEO, DONKI"]
+        SpaceXAPI["SpaceX API<br/>Launch schedule"]
     end
     
-    DB[(" PostgreSQL<br/><b>Основная БД</b><br/><i>Партиции по времени</i>")]
+    DB[("PostgreSQL<br/>Основная БД<br/>Партиции по времени")]
     
-    ISS -->|" Advisory Lock<br/>pg_try_advisory_lock"| IssService
-    OSDR -->|" Advisory Lock"| OsdrService
-    APOD -->|" Advisory Lock"| NasaService
-    NEO -->|" Advisory Lock"| NasaService
-    DONKI -->|" Advisory Lock"| NasaService
+    ISS -->|"Advisory Lock<br/>pg_try_advisory_lock"| IssService
+    OSDR -->|"Advisory Lock"| OsdrService
+    APOD -->|"Advisory Lock"| NasaService
+    NEO -->|"Advisory Lock"| NasaService
+    DONKI -->|"Advisory Lock"| NasaService
+    SpaceX -->|"Advisory Lock"| SpaceXService
+    
+    IssService -->|"HTTP GET JSON"| WhereISS
+    OsdrService -->|"HTTP GET JSON"| OSDRAPI
+    NasaService -->|"HTTP GET JSON"| NASAAPI
+    SpaceXService -->|"HTTP GET JSON"| SpaceXAPI
+    
+    IssService -->|"INSERT UPSERT"| DB
+    OsdrService -->|"BATCH INSERT COPY FROM"| DB
+    NasaService -->|"INSERT ON CONFLICT"| DB
+    SpaceXService -->|"INSERT ON CONFLICT"| DB
+    
+    style Schedulers fill:#1a2332,stroke:#455A64,stroke-width:3px,color:#fff
+    style Services fill:#5c3d1a,stroke:#FF9800,stroke-width:3px,color:#fff
+    style ExternalAPIs fill:#1a3a5c,stroke:#2196F3,stroke-width:3px,color:#fff
+    
+    style ISS fill:#2d5016,stroke:#4CAF50,stroke-width:2px,color:#fff
+    style OSDR fill:#1a4d5c,stroke:#00BCD4,stroke-width:2px,color:#fff
+    style APOD fill:#5c4d1a,stroke:#FFC107,stroke-width:2px,color:#000
+    style NEO fill:#5c3d1a,stroke:#FF9800,stroke-width:2px,color:#fff
+    style DONKI fill:#5c1a1a,stroke:#F44336,stroke-width:2px,color:#fff
+    style SpaceX fill:#4a1a5c,stroke:#9C27B0,stroke-width:2px,color:#fff
+    
+    style DB fill:#1a4d5c,stroke:#00BCD4,stroke-width:3px,color:#fff
+```
+
 ---
 
-## 5.  Единый формат обработки ошибок
+## 5. Единый формат обработки ошибок
 
 ```mermaid
 %%{init: {'theme':'dark', 'themeVariables': { 'fontSize':'15px'}, 'flowchart': {'nodeSpacing': 50, 'rankSpacing': 80}}}%%
 graph TD
-    Request[" HTTP Request<br/><i>Входящий запрос</i>"] --> Handler["🎯 Handler<br/><i>Обработчик</i>"]
-    Handler --> Service[" Service<br/><i>Бизнес-логика</i>"]
-    Service --> Error{" Error?<br/><i>Ошибка возникла?</i>"}
+    Request["HTTP Request<br/>Входящий запрос"] --> Handler["Handler<br/>Обработчик"]
+    Handler --> Service["Service<br/>Бизнес-логика"]
+    Service --> Error{"Error?<br/>Ошибка возникла?"}
     
-    Error -->|" Нет"| Success[" Success Data<br/><i>Успешные данные</i>"]
-    Error -->|" Да"| ApiError[" ApiError enum<br/><i>Тип ошибки</i>"]
+    Error -->|"Нет"| Success["Success Data<br/>Успешные данные"]
+    Error -->|"Да"| ApiError["ApiError enum<br/>Тип ошибки"]
     
-    ApiError --> InternalError[" InternalError<br/><b>500</b><br/><i>Внутренняя ошибка</i><br/>DB failure, Panic"]
-    ApiError --> UpstreamError[" UpstreamError<br/><b>503</b><br/><i>Внешний API недоступен</i><br/>NASA API timeout"]
-    ApiError --> NotFound[" NotFound<br/><b>404</b><br/><i>Ресурс не найден</i><br/>Dataset not exists"]
-    ApiError --> ValidationError["✓ ValidationError<br/><b>400</b><br/><i>Неверные данные</i><br/>Invalid date format"]
+    ApiError --> InternalError["InternalError<br/>500<br/>Внутренняя ошибка<br/>DB failure, Panic"]
+    ApiError --> UpstreamError["UpstreamError<br/>503<br/>Внешний API недоступен<br/>NASA API timeout"]
+    ApiError --> NotFound["NotFound<br/>404<br/>Ресурс не найден<br/>Dataset not exists"]
+    ApiError --> ValidationError["ValidationError<br/>400<br/>Неверные данные<br/>Invalid date format"]
     
-    InternalError --> Format[" ApiResponse::error()<br/><i>Унифицированный формат</i>"]
+    InternalError --> Format["ApiResponse::error()<br/>Унифицированный формат"]
     UpstreamError --> Format
     NotFound --> Format
     ValidationError --> Format
     
-    Success --> SuccessFormat[" ApiResponse::success()<br/><i>Формат успеха</i>"]
+    Success --> SuccessFormat["ApiResponse::success()<br/>Формат успеха"]
     
-    Format --> ErrorResponse[" Error Response<br/><b>HTTP 200</b><br/><code>{<br/>  ok: false,<br/>  error: {<br/>    code: 'UPSTREAM_503',<br/>    message: 'NASA API unavailable',<br/>    trace_id: 'abc123-def456'<br/>  }<br/>}</code>"]
+    Format --> ErrorResponse["Error Response<br/>HTTP 200<br/>ok: false, error: code, message, trace_id"]
     
-    SuccessFormat --> SuccessResponse[" Success Response<br/><b>HTTP 200</b><br/><code>{<br/>  ok: true,<br/>  data: {<br/>    latitude: 45.2,<br/>    longitude: -122.3<br/>  }<br/>}</code>"]
+    SuccessFormat --> SuccessResponse["Success Response<br/>HTTP 200<br/>ok: true, data"]
     
-    ErrorResponse --> Client[" Client<br/><i>Клиент получает ответ</i>"]
+    ErrorResponse --> Client["Client<br/>Клиент получает ответ"]
     SuccessResponse --> Client
     
     style Request fill:#1a3a5c,stroke:#2196F3,stroke-width:2px,color:#fff
@@ -278,6 +304,11 @@ graph TD
     style SuccessFormat fill:#2d5016,stroke:#4CAF50,stroke-width:2px,color:#fff
     
     style ErrorResponse fill:#5c1a1a,stroke:#F44336,stroke-width:3px,color:#fff
+    style SuccessResponse fill:#2d5016,stroke:#4CAF50,stroke-width:3px,color:#fff
+    style Success fill:#2d5016,stroke:#4CAF50,stroke-width:2px,color:#fff
+    
+    style Client fill:#2d3a42,stroke:#607D8B,stroke-width:2px,color:#fff
+```
     style SuccessResponse fill:#2d5016,stroke:#4CAF50,stroke-width:3px,color:#fff
     style Success fill:#2d5016,stroke:#4CAF50,stroke-width:2px,color:#fff
     
