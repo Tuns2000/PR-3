@@ -27,8 +27,9 @@ class OsdrService extends BaseHttpService
         
         $data = $this->get("{$this->rustApiUrl}/osdr/sync");
         
-        if (!$data['success']) {
-            throw new \Exception($data['error'] ?? 'Unknown error');
+        if (!($data['ok'] ?? false)) {
+            $error = $data['error']['message'] ?? $data['error'] ?? 'Unknown error';
+            throw new \Exception($error);
         }
 
         return $data['data'];
@@ -44,7 +45,7 @@ class OsdrService extends BaseHttpService
             try {
                 $data = $this->get("{$this->rustApiUrl}/osdr/list");
                 
-                if (isset($data['success']) && $data['success']) {
+                if (isset($data['ok']) && $data['ok']) {
                     return array_map(
                         fn($item) => OsdrDatasetDTO::fromArray($item),
                         $data['data']

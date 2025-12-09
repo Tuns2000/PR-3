@@ -24,8 +24,7 @@ class DashboardController extends Controller
             // Получаем данные через сервисы (вся логика в Service Layer)
             $issPosition = $this->issService->getLastPosition();
             $osdrDatasets = $this->osdrService->getDatasets(limit: 10);
-            // JWST API недоступен (404), используем пустой массив
-            $jwstImages = [];
+            $jwstImages = $this->jwstService->getImages();
 
             return view('dashboard', [
                 'issPosition' => $issPosition,

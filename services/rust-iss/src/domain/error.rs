@@ -13,29 +13,39 @@ pub struct ErrorDetail {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct ErrorInfo {
+    pub code: String,
+    pub message: String,
+    pub trace_id: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ApiResponse<T> {
-    pub success: bool,
+    pub ok: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub data: Option<T>,
-    pub error: Option<String>,
-    pub errors: Option<Vec<ErrorDetail>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<ErrorInfo>,
 }
 
 impl<T> ApiResponse<T> {
     pub fn success(data: T) -> Self {
         Self {
-            success: true,
+            ok: true,
             data: Some(data),
             error: None,
-            errors: None,
         }
     }
 
-    pub fn error(message: String) -> Self {
+    pub fn error(code: String, message: String, trace_id: Option<String>) -> Self {
         Self {
-            success: false,
+            ok: false,
             data: None,
-            error: Some(message),
-            errors: None,
+            error: Some(ErrorInfo {
+                code,
+                message,
+                trace_id,
+            }),
         }
     }
 }
@@ -98,28 +108,34 @@ impl From<reqwest::Error> for ApiError {
 
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
-        let (status, message) = match &self {
-            ApiError::DatabaseError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
-            ApiError::RedisError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
-            ApiError::ReqwestError(e) => (StatusCode::BAD_GATEWAY, e.to_string()),
-            ApiError::NotFound(msg) => (StatusCode::NOT_FOUND, msg.clone()),
-            ApiError::ValidationError(_) => {
-                (StatusCode::BAD_REQUEST, "Validation failed".to_string())
+        use uuid::Uuid;
+        
+        let trace_id = Uuid::new_v4().to_string();
+        
+        let (code, message) = match &self {
+            ApiError::DatabaseError(e) => ("DATABASE_ERROR".to_string(), e.to_string()),
+            ApiError::RedisError(e) => ("CACHE_ERROR".to_string(), e.to_string()),
+            ApiError::ReqwestError(e) => {
+                let code = if let Some(status) = e.status() {
+                    format!("UPSTREAM_{}", status.as_u16())
+                } else {
+                    "UPSTREAM_ERROR".to_string()
+                };
+                (code, e.to_string())
             }
-            ApiError::InternalError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg.clone()),
-            ApiError::UpstreamError(msg) => (StatusCode::BAD_GATEWAY, msg.clone()),
+            ApiError::NotFound(msg) => ("NOT_FOUND".to_string(), msg.clone()),
+            ApiError::ValidationError(_) => ("VALIDATION_ERROR".to_string(), "Validation failed".to_string()),
+            ApiError::InternalError(msg) => ("INTERNAL_ERROR".to_string(), msg.clone()),
+            ApiError::UpstreamError(msg) => ("UPSTREAM_ERROR".to_string(), msg.clone()),
         };
 
-        let body = Json(ApiResponse::<()> {
-            success: false,
-            data: None,
-            error: Some(message),
-            errors: match self {
-                ApiError::ValidationError(errors) => Some(errors),
-                _ => None,
-            },
-        });
+        // ✅ Всегда HTTP 200 для предсказуемости
+        let body = Json(ApiResponse::<()>::error(
+            code,
+            message,
+            Some(trace_id),
+        ));
 
-        (status, body).into_response()
+        (StatusCode::OK, body).into_response()
     }
 }

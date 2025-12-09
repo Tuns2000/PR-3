@@ -8,7 +8,7 @@ class JwstImageDTO
         public readonly string $id,
         public readonly string $observation_id,
         public readonly string $program,
-        public readonly ?string $details,
+        public readonly mixed $details,
         public readonly string $file_type,
         public readonly string $thumbnail,
         public readonly string $location
@@ -16,11 +16,17 @@ class JwstImageDTO
 
     public static function fromArray(array $data): self
     {
+        // details может быть строкой или объектом (массивом)
+        $details = $data['details'] ?? null;
+        if (is_array($details)) {
+            $details = (object) $details;
+        }
+        
         return new self(
             id: $data['id'] ?? '',
             observation_id: $data['observation_id'] ?? $data['observationId'] ?? '',
             program: $data['program'] ?? '',
-            details: $data['details'] ?? null,
+            details: $details,
             file_type: $data['file_type'] ?? $data['fileType'] ?? 'jpg',
             thumbnail: $data['thumbnail'] ?? '',
             location: $data['location'] ?? ''

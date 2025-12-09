@@ -27,8 +27,9 @@ class IssService extends BaseHttpService
         return Cache::remember('iss:last', 300, function () {
             $data = $this->get("{$this->rustApiUrl}/iss/current");
             
-            if (!$data['success']) {
-                throw new \Exception($data['error'] ?? 'Unknown error');
+            if (!($data['ok'] ?? false)) {
+                $error = $data['error']['message'] ?? $data['error'] ?? 'Unknown error';
+                throw new \Exception($error);
             }
 
             return IssPositionDTO::fromArray($data['data']);
@@ -44,8 +45,9 @@ class IssService extends BaseHttpService
         
         $data = $this->get("{$this->rustApiUrl}/iss/fetch");
         
-        if (!$data['success']) {
-            throw new \Exception($data['error'] ?? 'Unknown error');
+        if (!($data['ok'] ?? false)) {
+            $error = $data['error']['message'] ?? $data['error'] ?? 'Unknown error';
+            throw new \Exception($error);
         }
 
         return IssPositionDTO::fromArray($data['data']);
@@ -67,8 +69,9 @@ class IssService extends BaseHttpService
 
         $data = $this->get("{$this->rustApiUrl}/iss/history", $params);
         
-        if (!$data['success']) {
-            throw new \Exception($data['error'] ?? 'Unknown error');
+        if (!($data['ok'] ?? false)) {
+            $error = $data['error']['message'] ?? $data['error'] ?? 'Unknown error';
+            throw new \Exception($error);
         }
 
         return array_map(

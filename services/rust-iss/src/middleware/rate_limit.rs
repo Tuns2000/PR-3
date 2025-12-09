@@ -28,7 +28,9 @@ pub async fn rate_limit_middleware(
 ) -> Response {
     if limiter.check().is_err() {
         let error_response = ApiResponse::<()>::error(
-            "RATE_LIMIT_EXCEEDED: Too many requests, please try again later".to_string(),
+            "RATE_LIMIT_EXCEEDED".to_string(),
+            "Too many requests, please try again later".to_string(),
+            None,
         );
         return (StatusCode::TOO_MANY_REQUESTS, Json(error_response)).into_response();
     }

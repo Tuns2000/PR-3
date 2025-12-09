@@ -30,23 +30,29 @@ class JwstService extends BaseHttpService
             try {
                 $data = $this->get("{$this->rustApiUrl}/jwst/images/{$programId}");
                 
-                if ($data['ok']) {
+                if (($data['ok'] ?? false) && isset($data['data'])) {
                     return array_map(
                         fn($item) => JwstImageDTO::fromArray($item),
-                        $data['data']['body'] ?? []
+                        $data['data']
                     );
                 }
+                
+                // Если ok === false или нет data, пробуем fallback
+                throw new \Exception('Rust API returned no data');
             } catch (\Exception $e) {
                 // Fallback на прямой API JWST
-                $data = $this->get("{$this->jwstApiUrl}/images/program/{$programId}");
-                
-                return array_map(
-                    fn($item) => JwstImageDTO::fromArray($item),
-                    $data['body'] ?? []
-                );
+                try {
+                    $data = $this->get("{$this->jwstApiUrl}/images/program/{$programId}");
+                    
+                    return array_map(
+                        fn($item) => JwstImageDTO::fromArray($item),
+                        $data['body'] ?? []
+                    );
+                } catch (\Exception $fallbackError) {
+                    // Если оба API не работают, возвращаем пустой массив
+                    return [];
+                }
             }
-
-            return [];
         });
     }
 }
