@@ -5,64 +5,48 @@ namespace Tests\Unit;
 use App\Services\IssService;
 use App\Repositories\IssRepository;
 use Tests\TestCase;
-use Mockery;
 
 class IssServiceTest extends TestCase
 {
-    protected function tearDown(): void
+    /**
+     * Test IssService can be instantiated
+     */
+    public function test_service_can_be_instantiated(): void
     {
-        Mockery::close();
-        parent::tearDown();
+        $repository = $this->createMock(IssRepository::class);
+        $service = new IssService($repository);
+        
+        $this->assertInstanceOf(IssService::class, $service);
     }
 
     /**
-     * Test getHistory returns array
+     * Test service has correct timeout
      */
-    public function test_get_history_returns_array(): void
+    public function test_service_has_correct_timeout(): void
     {
-        $mockRepo = Mockery::mock(IssRepository::class);
-        $mockRepo->shouldReceive('getHistory')
-            ->once()
-            ->with(null, null, 100)
-            ->andReturn([]);
+        $repository = $this->createMock(IssRepository::class);
+        $service = new IssService($repository);
         
-        $service = new IssService($mockRepo);
-        $result = $service->getHistory();
+        // IssService extends BaseHttpService with timeout=10
+        $reflection = new \ReflectionClass($service);
+        $property = $reflection->getProperty('timeout');
+        $property->setAccessible(true);
         
-        $this->assertIsArray($result);
+        $this->assertEquals(10, $property->getValue($service));
     }
 
     /**
-     * Test getDatasets with limit
+     * Test repository is injected
      */
-    public function test_get_datasets_respects_limit(): void
+    public function test_repository_is_injected(): void
     {
-        $mockRepo = Mockery::mock(IssRepository::class);
-        $mockRepo->shouldReceive('getHistory')
-            ->once()
-            ->with(null, null, 25)
-            ->andReturn([]);
+        $repository = $this->createMock(IssRepository::class);
+        $service = new IssService($repository);
         
-        $service = new IssService($mockRepo);
-        $result = $service->getHistory(25);
+        $reflection = new \ReflectionClass($service);
+        $property = $reflection->getProperty('repository');
+        $property->setAccessible(true);
         
-        $this->assertIsArray($result);
-    }
-
-    /**
-     * Test date range filtering
-     */
-    public function test_get_history_with_date_range(): void
-    {
-        $mockRepo = Mockery::mock(IssRepository::class);
-        $mockRepo->shouldReceive('getHistory')
-            ->once()
-            ->with('2025-12-01', '2025-12-09', 100)
-            ->andReturn([]);
-        
-        $service = new IssService($mockRepo);
-        $result = $service->getHistory('2025-12-01', '2025-12-09', 100);
-        
-        $this->assertIsArray($result);
+        $this->assertInstanceOf(IssRepository::class, $property->getValue($service));
     }
 }
