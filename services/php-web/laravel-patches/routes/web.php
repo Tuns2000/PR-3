@@ -9,6 +9,7 @@ use App\Http\Controllers\AstroController;
 use App\Http\Controllers\ProxyController;
 use App\Http\Controllers\CmsController;
 use App\Http\Controllers\LegacyController;
+use App\Http\Controllers\TelemetryController;
 
 /*
 |--------------------------------------------------------------------------
@@ -58,4 +59,10 @@ Route::get('/page/{slug}', [CmsController::class, 'show'])->name('cms.page');
 Route::prefix('legacy')->group(function () {
     Route::get('/', [LegacyController::class, 'index'])->name('legacy.index');
     Route::get('/view/{filename}', [LegacyController::class, 'view'])->name('legacy.view');
+});
+
+// Telemetry CSV визуализация
+Route::prefix('telemetry')->group(function () {
+    Route::get('/', [TelemetryController::class, 'index'])->name('telemetry.index');
+    Route::get('/{filename}', [TelemetryController::class, 'show'])->name('telemetry.show');
 });

@@ -87,6 +87,11 @@
                             <i class="bi bi-moon-stars"></i> Astronomy
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('telemetry.*') ? 'active' : '' }}" href="{{ route('telemetry.index') }}">
+                            <i class="bi bi-file-earmark-spreadsheet"></i> Telemetry
+                        </a>
+                    </li>
                 </ul>
             </div>
         </div>

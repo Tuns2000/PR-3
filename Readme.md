@@ -3,6 +3,402 @@
 
 
 ---
+## 1. Доработка Frontend (Laravel)
+
+###  1.1 Убрать все лишние модули
+**Файл:** `services/php-web/laravel-patches/resources/views/`  
+Оставлены только активные страницы (ISS, Astronomy, JWST, OSDR, APOD)
+
+**Код:**
+```
+views/
+├── iss.blade.php       # ISS tracking с картой
+├── astro.blade.php     # Astronomy API events
+├── jwst.blade.php      # JWST изображения
+├── osdr.blade.php      # NASA OSDR данные
+└── apod.blade.php      # Astronomy Picture of the Day
+```
+
+---
+
+### 1.2 Добавить анимацию
+**Файл:** `services/php-web/laravel-patches/resources/views/iss.blade.php` (строки 180-220)  
+fadeIn, pulse, slideIn, hover эффекты
+
+**Код:**
+```css
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+```
+---
+
+### 1.3 Разделение на бизнес-контексты
+**Файл:** `routes/web.php` + отдельные сервисы  
+каждая функция на отдельной странице
+
+**Код**
+```php
+// routes/web.php
+Route::get('/iss', [IssController::class, 'index']);
+Route::get('/astronomy', [AstronomyController::class, 'index']);
+Route::get('/jwst', [JwstController::class, 'index']);
+Route::get('/osdr', [OsdrController::class, 'index']);
+Route::get('/apod', [ApodController::class, 'index']);
+```
+
+**Скриншот:**
+```
+![alt text](image-9.png)
+```
+
+---
+
+### 1.4 CSS-визуализация
+**Файл:** `resources/views/iss.blade.php` (строки 50-120)  
+карты Leaflet, графики Chart.js, стилизованные карточки
+
+**Код:**
+```javascript
+// Leaflet карта
+const map = L.map('map').setView([lat, lon], 4);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+// Chart.js график
+new Chart(ctx, {
+    type: 'line',
+    data: { labels: timestamps, datasets: [latitude, longitude] }
+});
+```
+
+**Скриншот:**
+```
+![alt text](image-11.png)
+```
+
+---
+
+### 1.5 Гибкие дашборды с фильтрацией
+**Файл:** `resources/views/iss.blade.php` (строки 520-580)  
+сортировка по всем столбцам (ascending/descending)
+
+**Код:**
+```javascript
+function sortTable(columnIndex) {
+    const table = document.getElementById('historyTable');
+    const rows = Array.from(table.querySelectorAll('tbody tr'));
+    
+    rows.sort((a, b) => {
+        const aValue = a.cells[columnIndex].getAttribute('data-value');
+        const bValue = b.cells[columnIndex].getAttribute('data-value');
+        return sortOrder === 'asc' 
+            ? parseFloat(aValue) - parseFloat(bValue)
+            : parseFloat(bValue) - parseFloat(aValue);
+    });
+}
+```
+
+**Скриншот:**
+```
+![alt text](image-10.png)
+```
+
+---
+
+### 1.6 Поиск с фильтрами
+**Файл:** `resources/views/iss.blade.php` (строки 470-490)  
+live search по всем полям
+
+**Код:**
+```javascript
+document.getElementById('searchInput').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const rows = document.querySelectorAll('#historyTable tbody tr');
+    
+    let visibleCount = 0;
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        if (text.includes(searchTerm)) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+});
+```
+
+**Скриншот:**
+```
+![alt text](image-12.png)
+```
+
+---
+
+## 2. Доработка Pascal Legacy
+
+### 2.1 Переписать CSV с типизацией
+**Файл:** `services/pascal-legacy/legacy.pas` (строки 140-190)  
+
+
+**Формат CSV:**
+```csv
+Timestamp,UnixTimestamp,Voltage,Temperature,IsActive,SourceFile
+2025-12-11T21:20:00Z,1765488000,12.706,21.06,TRUE,"pascal-legacy"
+```
+
+**Код:**
+```pascal
+procedure SaveToCSV(const Data: TTelemetryData);
+var
+  ISOTimestamp: String;
+  UnixTimestamp: Int64;
+  IsActive: Boolean;
+begin
+  ISOTimestamp := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"Z"', Data.Timestamp);
+  UnixTimestamp := DateTimeToUnix(Data.Timestamp);
+  IsActive := (Data.Voltage > 12.7);
+  
+  WriteLn(CSVFile, Format('%s,%d,%.3f,%.2f,%s,"%s"', [
+    ISOTimestamp,
+    UnixTimestamp,
+    Data.Voltage,
+    Data.Temperature,
+    BoolToStr(IsActive, 'TRUE', 'FALSE'),
+    'pascal-legacy'
+  ]));
+end;
+```
+
+```
+```
+
+---
+
+### 2.2 Визуализация CSV в таблицу
+**Файл:** `app/Http/Controllers/TelemetryController.php` + `resources/views/telemetry.blade.php`  
+Веб-интерфейс для просмотра CSV файлов
+
+**Код:**
+```php
+class TelemetryController extends Controller
+{
+    public function index()
+    {
+        $files = collect(File::files('/data/csv'))
+            ->filter(fn($file) => str_ends_with($file->getFilename(), '.csv'))
+            ->sortByDesc('modified');
+        
+        return view('telemetry', ['files' => $files]);
+    }
+    
+    public function show(string $filename)
+    {
+        $data = [];
+        if (($handle = fopen("/data/csv/$filename", 'r')) !== false) {
+            $headers = fgetcsv($handle);
+            while (($row = fgetcsv($handle)) !== false) {
+                $data[] = array_combine($headers, $row);
+            }
+        }
+        return view('telemetry-view', ['data' => $data]);
+    }
+}
+```
+
+**URL:** http://localhost:8080/telemetry
+
+**Скриншот:**
+```
+![alt text](image-14.png)
+
+```
+
+---
+
+###  2.3 Экспорт в XLSX
+**Файл:** `services/pascal-legacy/csv_to_xlsx.py` + `entrypoint.sh` (строки 16-20)  
+ автоматическая конвертация каждые 5 минут
+
+**Код:**
+```python
+import pandas as pd
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill
+
+def convert_csv_to_xlsx(csv_path: str) -> str:
+    df = pd.read_csv(csv_path)
+    
+    # Типизация
+    df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+    df['UnixTimestamp'] = pd.to_numeric(df['UnixTimestamp']).astype('Int64')
+    df['Voltage'] = pd.to_numeric(df['Voltage'])
+    df['Temperature'] = pd.to_numeric(df['Temperature'])
+    df['IsActive'] = df['IsActive'].map({'TRUE': True, 'FALSE': False})
+    
+    # Форматирование Excel
+    wb = Workbook()
+    ws = wb.active
+    # ... styling code ...
+    
+    wb.save(xlsx_path)
+```
+
+**Скриншот:**
+```
+![alt text](image-13.png)
+```
+
+---
+
+## 3. Доработка Backend (Docker)
+
+###  3.1 Rate Limiting
+**Файл:** `services/php-web/laravel-patches/app/Http/Middleware/RateLimitMiddleware.php`  
+ 60 запросов/минуту по умолчанию
+
+**Код:**
+```php
+class RateLimitMiddleware
+{
+    public function handle($request, Closure $next, $maxAttempts = 60, $decaySeconds = 60)
+    {
+        $key = $this->resolveRequestSignature($request);
+        
+        if (RateLimiter::tooManyAttempts($key, $maxAttempts)) {
+            return response()->json([
+                'ok' => false,
+                'error' => [
+                    'code' => 'RATE_LIMIT_EXCEEDED',
+                    'message' => 'Too many requests',
+                    'retry_after' => RateLimiter::availableIn($key)
+                ]
+            ], 429);
+        }
+        
+        RateLimiter::hit($key, $decaySeconds);
+        
+        $response = $next($request);
+        $response->headers->set('X-RateLimit-Limit', $maxAttempts);
+        $response->headers->set('X-RateLimit-Remaining', 
+            RateLimiter::remaining($key, $maxAttempts));
+        
+        return $response;
+    }
+}
+```
+
+
+```
+
+```
+
+---
+
+###  3.2 Redis интеграция
+**Файл:** `docker-compose.yml` (строки 60-75) + Laravel config  
+Redis для кэширования и rate limiting
+
+**Код:**
+```yaml
+redis:
+  image: redis:7-alpine
+  container_name: iss_redis
+  command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+  networks:
+    - backend
+  ports:
+    - "6379:6379"
+  volumes:
+    - redisdata:/data
+  healthcheck:
+    test: ["CMD", "redis-cli", "ping"]
+    interval: 5s
+```
+[`docker-compose.yml:60-75`]
+
+
+```
+
+```
+
+---
+
+###  3.3 Валидация данных (классы)
+**Файл:** 
+- `app/Http/Requests/IssPositionRequest.php`
+- `app/Http/Requests/AstronomyRequest.php`
+
+ FormRequest классы с валидацией
+
+**Код (IssPositionRequest):**
+```php
+class IssPositionRequest extends FormRequest
+{
+    public function rules(): array
+    {
+        return [
+            'latitude' => ['required', 'numeric', 'between:-90,90'],
+            'longitude' => ['required', 'numeric', 'between:-180,180'],
+            'altitude' => ['nullable', 'numeric', 'min:0'],
+            'velocity' => ['nullable', 'numeric', 'min:0'],
+            'start_date' => ['nullable', 'date'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'limit' => ['nullable', 'integer', 'between:1,1000']
+        ];
+    }
+    
+    protected function failedValidation(Validator $validator)
+    {
+        throw new HttpResponseException(response()->json([
+            'ok' => false,
+            'error' => [
+                'code' => 'VALIDATION_ERROR',
+                'message' => 'Validation failed',
+                'details' => $validator->errors()
+            ]
+        ], 422));
+    }
+}
+```
+
+```
+
+```
+
+---
+
+**Код:**
+```php
+class AstronomyRequest extends FormRequest
+{
+    public function rules(): array
+    {
+        return [
+            'latitude' => ['required', 'numeric', 'between:-90,90'],
+            'longitude' => ['required', 'numeric', 'between:-180,180'],
+            'elevation' => ['required', 'numeric', 'between:0,5000'],
+            'from_date' => ['required', 'date_format:Y-m-d'],
+            'to_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:from_date'],
+            'time' => ['required', 'date_format:H:i:s']
+        ];
+    }
+}
+```
+
+
+
+```
+
+```
+
+---
 
 ##  EXECUTIVE SUMMARY
 
