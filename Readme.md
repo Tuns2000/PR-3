@@ -249,8 +249,9 @@ def convert_csv_to_xlsx(csv_path: str) -> str:
 ```
 
 **Скриншот:**
-```
 ![alt text](image-13.png)
+```
+
 ```
 
 ---
