@@ -54,9 +54,8 @@ Route::get('/apod', [ApodController::class, 'index']);
 ```
 
 **Скриншот:**
-```
+
 ![alt text](image-9.png)
-```
 
 ---
 
@@ -78,9 +77,8 @@ new Chart(ctx, {
 ```
 
 **Скриншот:**
-```
+
 ![alt text](image-11.png)
-```
 
 ---
 
@@ -105,9 +103,8 @@ function sortTable(columnIndex) {
 ```
 
 **Скриншот:**
-```
+
 ![alt text](image-10.png)
-```
 
 ---
 
@@ -135,9 +132,8 @@ document.getElementById('searchInput').addEventListener('input', function(e) {
 ```
 
 **Скриншот:**
-```
+
 ![alt text](image-12.png)
-```
 
 ---
 
