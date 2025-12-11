@@ -212,6 +212,7 @@ class TelemetryController extends Controller
 
 **Скриншот:**
 ![alt text](image-14.png)
+![alt text](image-15.png)
 ```
 
 
