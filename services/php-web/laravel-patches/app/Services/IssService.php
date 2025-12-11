@@ -16,7 +16,7 @@ class IssService extends BaseHttpService
     {
         $this->rustApiUrl = env('RUST_ISS_URL', 'http://rust_iss:3000');
         $this->repository = $repository;
-        $this->timeout = 10;
+        $this->timeout = 30;
     }
 
     /**

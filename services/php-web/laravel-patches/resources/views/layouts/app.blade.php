@@ -6,6 +6,9 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'Cassiopeia Space Dashboard' }}</title>
     
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%230a0e27'/%3E%3Ccircle cx='50' cy='50' r='35' fill='none' stroke='%2300d4ff' stroke-width='2'/%3E%3Cpath d='M30 50 L50 30 L70 50 L50 70 Z' fill='%2300d4ff' opacity='0.6'/%3E%3Ccircle cx='50' cy='50' r='5' fill='%23fff'/%3E%3C/svg%3E">
+    
     <!-- Bootstrap 5 CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
@@ -77,6 +80,11 @@
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('osdr.*') ? 'active' : '' }}" href="{{ route('osdr.index') }}">
                             <i class="bi bi-database"></i> OSDR Datasets
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('astro.*') ? 'active' : '' }}" href="{{ route('astro.index') }}">
+                            <i class="bi bi-moon-stars"></i> Astronomy
                         </a>
                     </li>
                 </ul>

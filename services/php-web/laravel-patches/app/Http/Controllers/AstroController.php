@@ -13,6 +13,27 @@ class AstroController extends Controller
     ) {}
 
     /**
+     * Страница: Астрономические события
+     */
+    public function index()
+    {
+        try {
+            $events = $this->astronomyService->getEvents();
+            
+            return view('astro', [
+                'title' => 'Astronomy Events',
+                'events' => $events
+            ]);
+        } catch (\Exception $e) {
+            return view('astro', [
+                'title' => 'Astronomy Events',
+                'error' => $e->getMessage(),
+                'events' => []
+            ]);
+        }
+    }
+
+    /**
      * API: Получить астрономические события
      */
     public function apiEvents(): JsonResponse

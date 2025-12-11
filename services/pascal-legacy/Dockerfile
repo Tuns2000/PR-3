@@ -13,9 +13,10 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Копирование исходного кода
+# Копирование исходного кода и скриптов
 WORKDIR /app
 COPY legacy.pas .
+COPY csv_to_xlsx.py .
 
 # Компиляция
 RUN fpc -Fl/usr/lib/x86_64-linux-gnu \
@@ -27,17 +28,23 @@ RUN fpc -Fl/usr/lib/x86_64-linux-gnu \
 # ============================================
 FROM debian:bookworm-slim
 
-# Установка только runtime библиотек
+# Установка только runtime библиотек + Python для XLSX
 RUN apt-get update && apt-get install -y \
     libpq5 \
     ca-certificates \
+    python3 \
+    python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-# Копирование скомпилированного бинарника
-COPY --from=builder /app/legacy /usr/local/bin/legacy
-RUN chmod +x /usr/local/bin/legacy
+# Установка Python библиотек для XLSX
+RUN pip3 install --no-cache-dir pandas openpyxl --break-system-packages
 
-# Создание директории для CSV
+# Копирование скомпилированного бинарника и скриптов
+COPY --from=builder /app/legacy /usr/local/bin/legacy
+COPY --from=builder /app/csv_to_xlsx.py /usr/local/bin/csv_to_xlsx.py
+RUN chmod +x /usr/local/bin/legacy /usr/local/bin/csv_to_xlsx.py
+
+# Создание директории для CSV/XLSX
 RUN mkdir -p /data/csv
 
 # Переменные окружения по умолчанию
@@ -51,54 +58,3 @@ COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
-
-# ============================================
-# Stage 1: Builder (компиляция Rust)
-# ============================================
-FROM rust:slim AS build
-
-# Установка зависимостей
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    pkg-config \
-    libssl-dev \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
-
-# Копируем Cargo.toml для кэширования зависимостей
-COPY Cargo.toml ./
-
-# Создаём dummy main.rs для предварительной загрузки зависимостей
-RUN mkdir -p src && \
-    printf 'fn main() {}' > src/main.rs && \
-    cargo fetch
-
-# Копируем исходники
-COPY src ./src
-
-# Устанавливаем DATABASE_URL для SQLx макросов (offline mode)
-ENV SQLX_OFFLINE=true
-
-# Компилируем в release режиме
-RUN cargo build --release
-
-# ============================================
-# Stage 2: Runtime (минимальный образ)
-# ============================================
-FROM debian:12-slim
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
-
-# Копируем бинарник из builder
-COPY --from=build /app/target/release/rust-iss /app/rust-iss
-
-# Порт
-EXPOSE 3000
-
-# Запуск
-CMD ["/app/rust-iss"]

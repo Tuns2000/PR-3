@@ -1,10 +1,82 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="row">
+<style>
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    @keyframes slideIn {
+        from { transform: translateX(-20px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    .animate-fade-in {
+        animation: fadeIn 0.6s ease-out forwards;
+    }
+    .animate-pulse {
+        animation: pulse 2s ease-in-out infinite;
+    }
+    .animate-slide-in {
+        animation: slideIn 0.4s ease-out forwards;
+    }
+    .card {
+        transition: all 0.3s ease;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0, 212, 255, 0.3);
+    }
+    .stat-card {
+        border-left: 3px solid #00d4ff;
+        transition: all 0.3s ease;
+    }
+    .stat-card:hover {
+        border-left-width: 5px;
+        background-color: rgba(0, 212, 255, 0.05);
+    }
+    .btn {
+        transition: all 0.2s ease;
+    }
+    .btn:hover {
+        transform: scale(1.05);
+    }
+    .table-hover tbody tr {
+        transition: all 0.2s ease;
+    }
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 212, 255, 0.1) !important;
+        transform: scale(1.01);
+    }
+    .cursor-pointer {
+        cursor: pointer;
+        user-select: none;
+    }
+    .sortable:hover {
+        background-color: rgba(0, 212, 255, 0.1);
+    }
+    #searchInput {
+        background-color: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(0, 212, 255, 0.3);
+        color: #fff;
+    }
+    #searchInput:focus {
+        background-color: rgba(255, 255, 255, 0.15);
+        border-color: #00d4ff;
+        box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+    }
+    #searchInput::placeholder {
+        color: rgba(255, 255, 255, 0.5);
+    }
+</style>
+
+<div class="row animate-fade-in">
     <div class="col-12">
-        <h1 class="mb-4">
-            <i class="bi bi-globe"></i> ISS Tracker
+        <h1 class="mb-4 text-white">
+            <i class="bi bi-globe animate-pulse"></i> ISS Tracker
         </h1>
     </div>
 </div>
@@ -73,36 +145,69 @@
     </div>
 </div>
 
-{{-- History Table --}}
-<div class="row">
+{{-- History Table with Filters --}}
+<div class="row animate-fade-in" style="animation-delay: 0.2s;">
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="bi bi-table"></i> Recent Positions
-                </h5>
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-table"></i> Position History
+                    </h5>
+                    <div class="d-flex gap-2">
+                        <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="🔍 Search..." style="max-width: 200px;">
+                        <button class="btn btn-sm btn-outline-info" onclick="resetFilters()">
+                            <i class="bi bi-arrow-counterclockwise"></i> Reset
+                        </button>
+                    </div>
+                </div>
             </div>
             <div class="card-body">
                 @if(count($history) > 0)
+                    <div class="mb-3">
+                        <small class="text-white-50">
+                            Showing <span id="rowCount">{{ min(count($history), 50) }}</span> of {{ count($history) }} records
+                        </small>
+                    </div>
                     <div class="table-responsive">
-                        <table class="table table-dark table-hover">
+                        <table class="table table-dark table-hover" id="historyTable">
                             <thead>
                                 <tr>
-                                    <th>Timestamp</th>
-                                    <th>Latitude</th>
-                                    <th>Longitude</th>
-                                    <th>Altitude (km)</th>
-                                    <th>Velocity (km/h)</th>
+                                    <th class="sortable" data-column="0">
+                                        <span class="d-flex align-items-center cursor-pointer" onclick="sortTable(0)">
+                                            Timestamp <i class="bi bi-arrow-down-up ms-1"></i>
+                                        </span>
+                                    </th>
+                                    <th class="sortable" data-column="1">
+                                        <span class="d-flex align-items-center cursor-pointer" onclick="sortTable(1)">
+                                            Latitude <i class="bi bi-arrow-down-up ms-1"></i>
+                                        </span>
+                                    </th>
+                                    <th class="sortable" data-column="2">
+                                        <span class="d-flex align-items-center cursor-pointer" onclick="sortTable(2)">
+                                            Longitude <i class="bi bi-arrow-down-up ms-1"></i>
+                                        </span>
+                                    </th>
+                                    <th class="sortable" data-column="3">
+                                        <span class="d-flex align-items-center cursor-pointer" onclick="sortTable(3)">
+                                            Altitude (km) <i class="bi bi-arrow-down-up ms-1"></i>
+                                        </span>
+                                    </th>
+                                    <th class="sortable" data-column="4">
+                                        <span class="d-flex align-items-center cursor-pointer" onclick="sortTable(4)">
+                                            Velocity (km/h) <i class="bi bi-arrow-down-up ms-1"></i>
+                                        </span>
+                                    </th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                @foreach(array_slice($history, 0, 20) as $record)
-                                <tr>
-                                    <td>{{ \Carbon\Carbon::parse($record->timestamp)->format('Y-m-d H:i:s') }}</td>
-                                    <td>{{ number_format($record->latitude, 4) }}°</td>
-                                    <td>{{ number_format($record->longitude, 4) }}°</td>
-                                    <td>{{ number_format($record->altitude, 2) }}</td>
-                                    <td>{{ number_format($record->velocity, 2) }}</td>
+                            <tbody id="tableBody">
+                                @foreach(array_slice($history, 0, 50) as $record)
+                                <tr class="animate-slide-in" style="animation-delay: {{ $loop->index * 0.02 }}s;">
+                                    <td data-timestamp="{{ strtotime($record->timestamp) }}">{{ \Carbon\Carbon::parse($record->timestamp)->format('Y-m-d H:i:s') }}</td>
+                                    <td data-value="{{ $record->latitude }}">{{ number_format($record->latitude, 4) }}°</td>
+                                    <td data-value="{{ $record->longitude }}">{{ number_format($record->longitude, 4) }}°</td>
+                                    <td data-value="{{ $record->altitude }}">{{ number_format($record->altitude, 2) }}</td>
+                                    <td data-value="{{ $record->velocity }}">{{ number_format($record->velocity, 2) }}</td>
                                 </tr>
                                 @endforeach
                             </tbody>
@@ -195,6 +300,85 @@ async function refreshPosition() {
         console.error('Fetch error:', error);
         alert('Failed to fetch position: ' + error.message);
     }
+}
+
+// Search functionality
+document.getElementById('searchInput')?.addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const tbody = document.getElementById('tableBody');
+    const rows = tbody.getElementsByTagName('tr');
+    let visibleCount = 0;
+    
+    Array.from(rows).forEach(row => {
+        const text = row.textContent.toLowerCase();
+        if (text.includes(searchTerm)) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    document.getElementById('rowCount').textContent = visibleCount;
+});
+
+// Sort functionality
+let sortDirection = {};
+function sortTable(columnIndex) {
+    const table = document.getElementById('historyTable');
+    const tbody = document.getElementById('tableBody');
+    const rows = Array.from(tbody.getElementsByTagName('tr'));
+    
+    // Toggle sort direction
+    sortDirection[columnIndex] = sortDirection[columnIndex] === 'asc' ? 'desc' : 'asc';
+    const isAscending = sortDirection[columnIndex] === 'asc';
+    
+    rows.sort((a, b) => {
+        let aValue, bValue;
+        
+        if (columnIndex === 0) {
+            // Timestamp sorting
+            aValue = parseInt(a.cells[columnIndex].getAttribute('data-timestamp'));
+            bValue = parseInt(b.cells[columnIndex].getAttribute('data-timestamp'));
+        } else {
+            // Numeric sorting
+            aValue = parseFloat(a.cells[columnIndex].getAttribute('data-value'));
+            bValue = parseFloat(b.cells[columnIndex].getAttribute('data-value'));
+        }
+        
+        if (isAscending) {
+            return aValue - bValue;
+        } else {
+            return bValue - aValue;
+        }
+    });
+    
+    // Reappend sorted rows
+    rows.forEach(row => tbody.appendChild(row));
+    
+    // Update sort indicators
+    document.querySelectorAll('.sortable i').forEach(icon => {
+        icon.className = 'bi bi-arrow-down-up ms-1';
+    });
+    const currentHeader = document.querySelector(`.sortable[data-column="${columnIndex}"] i`);
+    if (currentHeader) {
+        currentHeader.className = isAscending ? 'bi bi-arrow-up ms-1' : 'bi bi-arrow-down ms-1';
+    }
+}
+
+// Reset filters
+function resetFilters() {
+    document.getElementById('searchInput').value = '';
+    const tbody = document.getElementById('tableBody');
+    const rows = tbody.getElementsByTagName('tr');
+    Array.from(rows).forEach(row => row.style.display = '');
+    document.getElementById('rowCount').textContent = rows.length;
+    
+    // Reset sort indicators
+    document.querySelectorAll('.sortable i').forEach(icon => {
+        icon.className = 'bi bi-arrow-down-up ms-1';
+    });
+    sortDirection = {};
 }
 
 // График истории

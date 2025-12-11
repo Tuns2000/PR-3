@@ -142,8 +142,9 @@ end;
 function SaveToCSV(const Data: TTelemetryRecord): Boolean;
 var
   DateStr: String;
-  TimestampStr: String;
+  UnixTimestamp: Int64;
   CSVExists: Boolean;
+  IsActive: Boolean;
 begin
   Result := False;
   try
@@ -158,16 +159,34 @@ begin
     else
       Rewrite(CSVFile);
 
+    { Header with data types - only for new files }
     if not CSVExists then
-      WriteLn(CSVFile, 'Timestamp,Voltage,Temperature,SourceFile');
+      WriteLn(CSVFile, 'Timestamp,UnixTimestamp,Voltage,Temperature,IsActive,SourceFile');
 
-    TimestampStr := FormatDateTime('yyyy-mm-dd hh:nn:ss', Data.RecordedAt);
-    WriteLn(CSVFile, Format('%s,%.2f,%.2f,"%s"',
-      [TimestampStr, Data.Voltage, Data.Temp, Data.SourceFile]));
+    { Convert datetime to Unix timestamp }
+    UnixTimestamp := DateTimeToUnix(Data.RecordedAt);
+    
+    { Determine active status (example: voltage > 12.7 = active) }
+    IsActive := Data.Voltage > 12.7;
+
+    { Data row with proper types:
+      - Timestamp: ISO 8601 format (string)
+      - UnixTimestamp: integer (numeric)
+      - Voltage: float with 3 decimals (numeric)
+      - Temperature: float with 2 decimals (numeric)
+      - IsActive: boolean as TRUE/FALSE (logical)
+      - SourceFile: string with quotes (text) }
+    WriteLn(CSVFile, Format('%s,%d,%.3f,%.2f,%s,"%s"',
+      [FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"Z"', Data.RecordedAt),
+       UnixTimestamp,
+       Data.Voltage,
+       Data.Temp,
+       BoolToStr(IsActive, 'TRUE', 'FALSE'),
+       Data.SourceFile]));
 
     Close(CSVFile);
 
-    LogInfo('Saved to CSV: ' + CSVFilePath);
+    LogInfo(Format('CSV: timestamp=%d, active=%s', [UnixTimestamp, BoolToStr(IsActive, 'TRUE', 'FALSE')]));
     Result := True;
   except
     on E: Exception do

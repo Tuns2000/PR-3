@@ -42,6 +42,7 @@ Route::prefix('jwst')->group(function () {
 
 // Astronomy API
 Route::prefix('astro')->group(function () {
+    Route::get('/', [AstroController::class, 'index'])->name('astro.index');
     Route::get('/api/events', [AstroController::class, 'apiEvents'])->name('astro.api.events');
 });
 
