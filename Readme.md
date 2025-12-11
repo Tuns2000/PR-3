@@ -211,8 +211,9 @@ class TelemetryController extends Controller
 **URL:** http://localhost:8080/telemetry
 
 **Скриншот:**
-```
 ![alt text](image-14.png)
+```
+
 
 ```
 
